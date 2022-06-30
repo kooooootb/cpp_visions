@@ -45,17 +45,17 @@ public:
 
 class Polygons{
 private:
-	std::list<Polygon> polygons;
+	std::list<std::shared_ptr<Polygon>> polygons;
 	std::vector<Point> points;
 public:
 	Polygons() = default;
 	
-	void add(Polygon &polygon);
+	void add(std::shared_ptr<Polygon> &polygon);
 	
 	bool empty() const { return polygons.empty(); }
 	
-	std::list<Polygon>::iterator begin() { return polygons.begin(); }
-	std::list<Polygon>::iterator end() { return polygons.end(); }
+	std::list<std::shared_ptr<Polygon>>::iterator begin() { return polygons.begin(); }
+	std::list<std::shared_ptr<Polygon>>::iterator end() { return polygons.end(); }
 	
 	std::vector<std::shared_ptr<sf::Shape>> collectShapes() const;
 	
@@ -81,5 +81,5 @@ public:
 	void hideAll();
 	Point &operator[](unsigned int index);
 	
-	void updateVisibility() { for(auto &it : polygons) it.updateVisibility(); }
+	void updateVisibility() { for(auto &it : polygons) it->updateVisibility(); }
 };

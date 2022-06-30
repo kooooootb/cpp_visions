@@ -82,7 +82,7 @@ Polygons loadLevelForTree(const std::string &fname){
 		fd.read(reinterpret_cast<char *>(&polygonsAmount), sizeof(polygonsAmount));
 		
 		for(int i = 0; i < polygonsAmount; ++i){
-			Polygon pol;
+			std::shared_ptr<Polygon> pol = std::make_shared<Polygon>();
 			
 			unsigned long long bpAmount;
 			fd.read(reinterpret_cast<char *>(&bpAmount), sizeof(bpAmount));
@@ -91,9 +91,9 @@ Polygons loadLevelForTree(const std::string &fname){
 				float x, y;
 				fd.read(reinterpret_cast<char *>(&x), sizeof(x));
 				fd.read(reinterpret_cast<char *>(&y), sizeof(y));
-				pol.addBPoint(Point(pol, x, y));
+				pol->addBPoint(Point(*pol, x, y));
 			}
-			pol.endAdding();
+			pol->endAdding();
 			
 			pols.add(pol);
 		}
@@ -103,7 +103,7 @@ Polygons loadLevelForTree(const std::string &fname){
 	
 	if(!pols.empty()){
 		for(auto &it : pols){
-			it.setConvex();
+			it->setConvex();
 		}
 	}
 	

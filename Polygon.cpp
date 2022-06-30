@@ -55,14 +55,14 @@ void Polygon::updateVisibility() {
 	convex->setFillColor(sf::Color(0, 0, 0, visible ? 200 : 100));
 }
 
-void Polygons::add(Polygon &polygon) {
+void Polygons::add(std::shared_ptr<Polygon> &polygon) {
 	polygons.push_back(std::move(polygon));
 	
-	for(const auto &it : polygons.back().boarderPoints){
+	for(const auto &it : polygons.back()->boarderPoints){
 		points.push_back(it);
 	}
 	
-	for(const auto &it : polygons.back().extraPoints){
+	for(const auto &it : polygons.back()->extraPoints){
 		points.push_back(it);
 	}
 }
@@ -71,7 +71,7 @@ std::vector<std::shared_ptr<sf::Shape>> Polygons::collectShapes() const {
 	std::vector<std::shared_ptr<sf::Shape>> shapes;
 	
 	for(const auto &it : polygons){
-		shapes.push_back(it.convex);
+		shapes.push_back(it->convex);
 	}
 	
 	return shapes;
@@ -79,7 +79,7 @@ std::vector<std::shared_ptr<sf::Shape>> Polygons::collectShapes() const {
 
 void Polygons::hideAll() {
 	for(auto &it : polygons){
-		it.makeInvisible();
+		it->makeInvisible();
 	}
 }
 
