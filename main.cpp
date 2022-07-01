@@ -18,10 +18,11 @@ private:
 	float y = (float) screen_height / 2;
 	float dx = 0, dy = 0;
 	constexpr static float friction = 0.5;
-	constexpr static float step = 5;
+	constexpr static float step = 1;
 	constexpr static float viewDistance = 50;
+	constexpr static float shapeRadius = 6;
+	constexpr static float viewAngle = 6;
 	
-	const float shapeRadius = 6;
 	std::shared_ptr<sf::CircleShape> playerShape;
 	std::shared_ptr<sf::CircleShape> viewShape;
 public:
@@ -154,18 +155,6 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 					switch(event.key.code){
-						case sf::Keyboard::W:
-							player.accelerate(0, -1);
-							break;
-						case sf::Keyboard::A:
-							player.accelerate(-1, 0);
-							break;
-						case sf::Keyboard::S:
-							player.accelerate(0, 1);
-							break;
-						case sf::Keyboard::D:
-							player.accelerate(1, 0);
-							break;
 						case sf::Keyboard::Escape:
 							window.close();
 							break;
@@ -180,6 +169,10 @@ int main(){
 			}
 		}
 		
+		if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) player.accelerate(0, -1);
+		if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) player.accelerate(-1, 0);
+		if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) player.accelerate(0, 1);
+		if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) player.accelerate(1, 0);
 		player.update(polygons, tree);
 		
 		window.clear();
