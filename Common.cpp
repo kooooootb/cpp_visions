@@ -3,6 +3,7 @@
 #include <list>
 #include <vector>
 #include <memory>
+#include <cmath>
 
 #include "Common.h"
 
@@ -17,4 +18,22 @@ void createBackground(std::vector<std::shared_ptr<sf::Shape>> &shapes){
 	backgroundShape->setPosition(0, 0);
 	backgroundShape->setFillColor(sf::Color(228, 228, 228));
 	shapes.push_back(backgroundShape);
+}
+
+void initViewSector(std::shared_ptr<sf::ConvexShape> &viewShape, float viewDistance, float viewAngle){
+	int dotsAmount = (int) (viewDistance * viewAngle);//dots in arc
+	
+	int index = 0;
+	viewShape->setPointCount(dotsAmount + 1);
+	float dAngle = viewAngle / (float) (dotsAmount - 1);
+	float currentAngle = M_PI_2 + viewAngle / 2.0;
+	
+	for(;index < dotsAmount;++index){
+		viewShape->setPoint(index, sf::Vector2f((float) (viewDistance * cos((double) currentAngle)),
+												(float) (-1 * viewDistance * sin((double) currentAngle))));
+		
+		currentAngle = currentAngle - dAngle;
+	}
+	
+	viewShape->setPoint(index, sf::Vector2f(0, 0));
 }

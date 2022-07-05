@@ -19,12 +19,12 @@ private:
 	float dx = 0, dy = 0;
 	constexpr static float friction = 0.5;
 	constexpr static float step = 1;
-	constexpr static float viewDistance = 50;
+	constexpr static float viewDistance = 100;
 	constexpr static float shapeRadius = 6;
-	constexpr static float viewAngle = 6;
+	constexpr static float viewAngle = degToRad(60);
 	
 	std::shared_ptr<sf::CircleShape> playerShape;
-	std::shared_ptr<sf::CircleShape> viewShape;
+	std::shared_ptr<sf::ConvexShape> viewShape;
 public:
 	Player() {
 		playerShape = std::make_shared<sf::CircleShape>(shapeRadius);
@@ -32,12 +32,13 @@ public:
 		playerShape->setPosition(x, y);
 		playerShape->setOrigin(shapeRadius, shapeRadius);
 		
-		viewShape = std::make_shared<sf::CircleShape>(viewDistance);
+		viewShape = std::make_shared<sf::ConvexShape>(viewDistance);
 		viewShape->setFillColor(sf::Color::Transparent);
 		viewShape->setOutlineColor(sf::Color(255, 51, 33));
 		viewShape->setOutlineThickness(1);
 		viewShape->setPosition(x, y);
-		viewShape->setOrigin(viewDistance, viewDistance);
+		
+		initViewSector(viewShape, viewDistance, viewAngle);
 	}
 	
 	~Player() = default;
@@ -45,7 +46,7 @@ public:
 	float getX()const { return x; }
 	float getY()const { return y; }
 	const std::shared_ptr<sf::CircleShape> &getPlayerShape() const { return playerShape; }
-	const std::shared_ptr<sf::CircleShape> &getViewShape() const { return viewShape; }
+	const std::shared_ptr<sf::ConvexShape> &getViewShape() const { return viewShape; }
 	
 	void accelerate(float dX, float dY){
 		this->dx += dX * step;
@@ -57,7 +58,7 @@ public:
 		this->y += (float) vector.y;
 	}
 	
-	static void updateCoord(float &coord, float &d, float limit){
+	inline static void updateCoord(float &coord, float &d, float limit){
 		coord += d;
 		
 		if(coord >= limit){
@@ -70,7 +71,11 @@ public:
 		}
 	}
 	
-	void update(Polygons &polygons, my_kd_tree_t &tree){
+	void update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &mousePos){
+		//rotate view sector:
+		viewShape->setRotation(radToDeg(
+				getAngleToZero(sf::Vector2f((float) mousePos.x - x, (float) mousePos.y - y))));
+		
 		//set player coords:
 		updateCoord(x, dx, screen_width);
 		updateCoord(y, dy, screen_height);
@@ -103,12 +108,13 @@ public:
 int main(){
 	//level save file
 	const static std::string fname = "level.bin";
+	const static unsigned int fps = 60;
 	
 	//init window
 	sf::ContextSettings settings;
 	settings.antialiasingLevel = 8;
-	sf::RenderWindow window(sf::VideoMode(screen_width, screen_height), "15", sf::Style::Default, settings);
-	window.setFramerateLimit(60);
+	sf::RenderWindow window(sf::VideoMode(screen_width, screen_height), std::to_string(fps), sf::Style::Default, settings);
+	window.setFramerateLimit(fps);
 	
 	//init arrays
 	std::vector<std::shared_ptr<sf::Shape>> defShapes;//default shapes (player and background)
@@ -131,6 +137,8 @@ int main(){
 	//variables:
 	bool moveByMouse = false;
 	sf::Vector2i mousePos;
+	sf::Clock clock;
+	sf::Time tick = sf::seconds(1.0 / fps);
 	
 	sf::Event event{};
 	while (window.isOpen()) {
@@ -169,11 +177,14 @@ int main(){
 			}
 		}
 		
+		while(clock.getElapsedTime() < tick);
+		clock.restart();
+		
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) player.accelerate(0, -1);
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) player.accelerate(-1, 0);
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) player.accelerate(0, 1);
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) player.accelerate(1, 0);
-		player.update(polygons, tree);
+		player.update(polygons, tree, sf::Mouse::getPosition(window));
 		
 		window.clear();
 		
