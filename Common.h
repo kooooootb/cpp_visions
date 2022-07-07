@@ -5,9 +5,9 @@
 
 enum PointType{ //ordering is important
     within = 0,
-    behind,
-    semicircle,
-    outside,
+    behind = 1,
+    semicircle = 2,
+    outside = 3,
 };
 
 class Point{

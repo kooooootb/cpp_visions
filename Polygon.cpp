@@ -63,7 +63,7 @@ void Polygon::setPointsType(const Player &player, const std::array<Vector, 3> &v
             point.type = behind;
         } else if (pointVector.sqr() > std::pow(radius, 2)) {
             point.type = outside;
-        } else if (views[0].cross(pointVector) * views[2].cross(pointVector) > 0) {
+        } else if (views[0].cross(pointVector) * pointVector.cross(views[2]) > 0) {
             point.type = within;
         } else {
             point.type = semicircle;
@@ -162,22 +162,26 @@ std::vector<Point> arcSegmentVSLineIntersection(const Point &p1, const Point &p2
 }
 
 std::vector<Point> twoLinesVSLineIntersection(const Point &p1, const Point &p2, const Point &center, const std::array<Vector, 3> &views){
-    //1 line: p1 + s * d1
-    const Vector d1(p1, p2);
-    const Vector d1L = d1.perpendicular();
+    //1 line: p1 + s * d0
+    const Vector d0(p1, p2);
     //2 line: center + t * views[0]
     //3 line: center + t * views[2]
+    //p1 == P0 ; center == P1
+
+    const Vector delta(p1, center);
 
     std::vector<Point> res;
 
     for(int i = 0;i < 3;i+=2){
-        const Vector &d2 = views[i], d2L = d2.perpendicular();
-        float denominator = d1 * d2L;
+        const Vector &d1 = views[i];
+        float denominator = d0 * (d1.perpendicular());
 
         if(denominator != 0){
-            float t = Vector(p1, p2) * d1L / denominator;
-            if(t >= 0 && t <= 1){
-                res.emplace_back(center + t * d2);
+            float t = (delta * (d0.perpendicular())) / denominator;
+            float s = (delta * (d1.perpendicular())) / denominator;
+            if(t >= 0 && t <= 1 && s >= 0 && s <= 1){
+                Point cross = center + (t * d1);
+                res.emplace_back(cross);
             }
         }
     }
@@ -185,19 +189,42 @@ std::vector<Point> twoLinesVSLineIntersection(const Point &p1, const Point &p2, 
     return res;
 }
 
-void Polygons::updateVisibility(Player &player) {
+#ifdef T5_DEBUG
+void drawPoint_DBG(sf::RenderWindow &window, PointType type, const Point &point){
+    sf::CircleShape circle(4);
+    circle.setOrigin(4, 4);
+    circle.setPosition(point.x, point.y);
+
+    switch(type){
+        case within: circle.setFillColor(sf::Color::Green); break;
+        case semicircle: circle.setFillColor(sf::Color::Red); break;
+        case outside: circle.setFillColor(sf::Color::Magenta); break;
+        case behind: circle.setFillColor(sf::Color::Black); break;
+    }
+
+    window.draw(circle);
+}
+#endif
+
+void Polygons::updateVisibility(Player &player
+#ifdef T5_DEBUG
+                                , sf::RenderWindow &window
+#endif
+                                ) {
     const Point &center = player.getPosition();
     float radius = player.getViewDistance();
     float angle = player.getAngle();
-    float diffAngle = player.getViewAngle() / 2;
+    float diffAngle = player.getViewAngle();
 
     std::array<Vector, 3> views{{  {(float) (radius * cos(angle + diffAngle)), (float) (radius * sin(angle + diffAngle))},
-                                   {(float) (radius * cos(angle - diffAngle)), (float) (radius * sin(angle - diffAngle))},
-                                   {(float) (radius * cos(angle)), (float) (radius * sin(angle))} }};
+                                   {(float) (radius * cos(angle)), (float) (radius * sin(angle))},
+                                   {(float) (radius * cos(angle - diffAngle)), (float) (radius * sin(angle - diffAngle))}}};
 
     //set points type:
     for(const auto &pol : polygons) {
-        pol->setPointsType(player, views);
+        if(pol->visible){
+            pol->setPointsType(player, views);
+        }
     }
 
     //result arrays:
@@ -207,15 +234,22 @@ void Polygons::updateVisibility(Player &player) {
 
     //set angle points and block edges array
     for(const auto &pol : polygons) {
+        if(!pol->visible){
+            continue;
+        }
+
         const Point *previousPointPtr = &pol->boarderPoints.back();
         PointType previous = pol->boarderPoints.back().type, current;
 
         for(const auto &point : pol->boarderPoints){
             current = point.type;
+            PointType currentTemp = current;
+
             const Point *currentPointPtr = &point;
 
             if(previous > current){
                 std::swap(currentPointPtr, previousPointPtr);
+                std::swap(current, previous);
             }
 
             const Point &currentPoint = *currentPointPtr;
@@ -227,7 +261,8 @@ void Polygons::updateVisibility(Player &player) {
                         case within: {
                             //within - within
                             anglePoints.push_back(previousPoint);
-                            blockingEdges.emplace_back(previousPoint, currentPoint);
+                            anglePoints.push_back(currentPoint);
+                            blockingEdges.emplace_back(*std::prev(anglePoints.end(), 2), *std::prev(anglePoints.end(), 1));
                             break;
                         }
                         case behind: {
@@ -236,7 +271,7 @@ void Polygons::updateVisibility(Player &player) {
                             std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint,
                                                                                            center, views);
                             anglePoints.push_back(intersectPoint.front());
-                            blockingEdges.emplace_back(previousPoint, currentPoint);
+                            blockingEdges.emplace_back(*std::prev(anglePoints.end(), 2), *std::prev(anglePoints.end(), 1));
                             break;
                         }
                         case semicircle: {
@@ -245,7 +280,7 @@ void Polygons::updateVisibility(Player &player) {
                             std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint,
                                                                                            center, views);
                             anglePoints.push_back(intersectPoint.front());
-                            blockingEdges.emplace_back(previousPoint, currentPoint);
+                            blockingEdges.emplace_back(*std::prev(anglePoints.end(), 2), *std::prev(anglePoints.end(), 1));
                             break;
                         }
                         case outside: {
@@ -257,7 +292,7 @@ void Polygons::updateVisibility(Player &player) {
                                 intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint, center, views);
                             }
                             anglePoints.push_back(intersectPoint.front());
-                            blockingEdges.emplace_back(previousPoint, intersectPoint.front());
+                            blockingEdges.emplace_back(*std::prev(anglePoints.end(), 2), *std::prev(anglePoints.end(), 1));
                             break;
                         }
                     }
@@ -271,21 +306,24 @@ void Polygons::updateVisibility(Player &player) {
                         }
                         case outside: {
                             //behind - outside
-                            std::vector<Point> intersectPoint = arcSegmentVSLineIntersection(previousPoint, currentPoint,
-                                                                                             center, radius, views);
+                            std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint, center, views);
                             if (intersectPoint.empty()) {
-                                intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint, center, views);
-                                anglePoints.push_back(intersectPoint.front());
-                                anglePoints.push_back(intersectPoint.back());
+                                intersectPoint = arcSegmentVSLineIntersection(previousPoint, currentPoint, center, radius, views);
+                                if(intersectPoint.size() == 2){
+                                    anglePoints.push_back(intersectPoint.front());
+                                    anglePoints.push_back(intersectPoint.back());
+                                    blockingEdges.emplace_back(*std::prev(anglePoints.end(), 2), *std::prev(anglePoints.end(), 1));
+                                }
                             } else if(intersectPoint.size() == 1) {
                                 anglePoints.push_back(intersectPoint.front());
-                                intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint, center, views);
+                                intersectPoint = arcSegmentVSLineIntersection(previousPoint, currentPoint, center, radius, views);
                                 anglePoints.push_back(intersectPoint.front());
+                                blockingEdges.emplace_back(*std::prev(anglePoints.end(), 2), *std::prev(anglePoints.end(), 1));
                             } else{
                                 anglePoints.push_back(intersectPoint.front());
                                 anglePoints.push_back(intersectPoint.back());
+                                blockingEdges.emplace_back(*std::prev(anglePoints.end(), 2), *std::prev(anglePoints.end(), 1));
                             }
-                            blockingEdges.emplace_back(*std::prev(anglePoints.end(), 2), *std::prev(anglePoints.end(), 1));
                             break;
                         }
                         case semicircle: {
@@ -363,12 +401,45 @@ void Polygons::updateVisibility(Player &player) {
                 }
             }
 
-            previous = current;
+            previous = currentTemp;
             previousPointPtr = &point;
         }
     }
 
-    std::cout << anglePoints.size() << ' ' << blockingEdges.size() << std::endl;
+#ifdef T5_DEBUG
+//    std::cout << anglePoints.size() << ' ' << blockingEdges.size() << std::endl;
+//    std::cout << blockingEdges.front().first.x << ' ' << blockingEdges.front().first.y << std::endl;
 
+    sf::VertexArray lines(sf::LinesStrip, 2);
+    lines[0].position = sf::Vector2f(center.x, center.y);
+    lines[0].color = sf::Color::Red;
+    lines[1].position = sf::Vector2f(views[0].x + center.x, views[0].y + center.y);
+    lines[1].color = sf::Color::Red;
+    window.draw(lines);
+
+    lines = sf::VertexArray(sf::LinesStrip, 2);
+    lines[0].position = sf::Vector2f(center.x, center.y);
+    lines[0].color = sf::Color::Red;
+    lines[1].position = sf::Vector2f(views[2].x + center.x, views[2].y + center.y);
+    lines[1].color = sf::Color::Red;
+    window.draw(lines);
+
+    for(const auto &edge : blockingEdges){
+        lines = sf::VertexArray(sf::LinesStrip, 2);
+        lines[0].position = sf::Vector2f(edge.first.x, edge.first.y);
+        lines[0].color = sf::Color::Red;
+        lines[1].position = sf::Vector2f(edge.second.x, edge.second.y);
+        lines[1].color = sf::Color::Red;
+        window.draw(lines);
+
+        sf::CircleShape circle(4);
+        circle.setFillColor(sf::Color::Red);
+        circle.setOrigin(4, 4);
+        circle.setPosition(edge.first.x, edge.first.y);
+        window.draw(circle);
+        circle.setPosition(edge.second.x, edge.second.y);
+        window.draw(circle);
+    }
+#endif
 
 }

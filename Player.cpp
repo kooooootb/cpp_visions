@@ -18,7 +18,12 @@ Player::Player() : position((float) screen_width / 2, (float) screen_height / 2)
 //		initViewSector(viewShape, viewDistance, viewAngle);
 }
 
-void Player::update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &mousePos) {
+void
+Player::update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &mousePos
+#ifdef T5_DEBUG
+               , sf::RenderWindow &window
+#endif
+               ) {
     //rotate view sector:
     angle = getAngleToZero(sf::Vector2f((float) mousePos.x - position.x, (float) mousePos.y - position.y));
 
@@ -45,7 +50,11 @@ void Player::update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &
         polygons[pair.first].polygon.makeVisible();
     }
 
-    polygons.updateVisibility(*this);
+    polygons.updateVisibility(*this
+#ifdef T5_DEBUG
+                              , window
+#endif
+                              );
 
 //		std::cout << nMatches << std::endl;
 }

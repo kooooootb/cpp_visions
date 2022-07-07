@@ -92,12 +92,16 @@ int main(){
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) player.accelerate(-1, 0);
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) player.accelerate(0, 1);
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) player.accelerate(1, 0);
-		player.update(polygons, tree, sf::Mouse::getPosition(window));
-		
-		window.clear();
-		
+
+        window.clear();
+#ifndef T5_DEBUG
+        player.update(polygons, tree, sf::Mouse::getPosition(window));
+#endif
 		//draw section
 		drawAll(window, defShapes);//draw default shapes
+#ifdef T5_DEBUG
+        player.update(polygons, tree, sf::Mouse::getPosition(window), window);
+#endif
 		drawAll(window, convexShapes);//draw forms' shapes
 		
 		window.display();

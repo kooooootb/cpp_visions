@@ -17,9 +17,9 @@ private:
 
     constexpr static float friction = 0.5;
     constexpr static float step = 1;
-    constexpr static float viewDistance = 100;
+    constexpr static float viewDistance = 300;
     constexpr static float shapeRadius = 6;
-    constexpr static float viewAngle = degToRad(60);
+    constexpr static float viewAngle = degToRad(20);
 
     std::shared_ptr<sf::CircleShape> playerShape;
     std::shared_ptr<sf::ConvexShape> viewShape;
@@ -60,5 +60,9 @@ public:
         }
     }
 
-    void update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &mousePos);
+    void update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &mousePos
+#ifdef T5_DEBUG
+                , sf::RenderWindow &window
+#endif
+                );
 };
