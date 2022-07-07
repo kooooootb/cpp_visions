@@ -1,28 +1,24 @@
+#include "SFML/Graphics.hpp"
+
 #include <vector>
 #include <list>
 #include <cmath>
 #include <memory>
-#include "SFML/Graphics.hpp"
 
-struct Point;
-class Polygon;
-class Polygons;
+#include "headers.h"
+#include "Common.h"
 
-struct Point{
-	float x, y;
-	
-	Polygon &polygon;
-	
-	Point(Polygon &pol, float X, float Y) : polygon(pol) , x(X) , y(Y) {}
-	
-	float getDistance(const Point &point) const{
-		return (float) sqrt(pow((x - point.x), 2) + pow((y - point.y), 2));
-	}
+class PolygonPoint : public Point{
+public:
+    Polygon &polygon;
+    PointType type = outside;
+
+    PolygonPoint(Polygon &pol, float X, float Y) : polygon(pol) , Point(X, Y) {}
 };
 
 class Polygon{
 private:
-	std::list<Point> boarderPoints, extraPoints;
+	std::list<PolygonPoint> boarderPoints, extraPoints;
 	friend class Polygons;
 	static constexpr float minDistance = 10;
 	
@@ -30,15 +26,17 @@ private:
 	
 	std::shared_ptr<sf::ConvexShape> convex;
 	
-	void connectBPoints(const Point &bp1, const Point &bp2);
+	void connectBPoints(const PolygonPoint &bp1, const PolygonPoint &bp2);
 public:
 	Polygon();
-	void addBPoint(const Point &point);
+	void addBPoint(const PolygonPoint &point);
 	void endAdding();
 	void setConvex();
 	void makeInvisible();
 	void makeVisible();
-	void updateVisibility();
+
+    void setPointsType(const Player &player, const std::array<Vector, 3> &vectors);
+
 	const sf::ConvexShape &getConvex()const { return *convex; }
 //	bool isVisible() const { return convex.getFillColor().a > 0; };
 };
@@ -46,7 +44,7 @@ public:
 class Polygons{
 private:
 	std::list<std::shared_ptr<Polygon>> polygons;
-	std::vector<Point> points;
+	std::vector<PolygonPoint> points;
 public:
 	Polygons() = default;
 	
@@ -79,7 +77,12 @@ public:
 	//------------------------------------------------------------------
 	
 	void hideAll();
-	Point &operator[](unsigned int index);
+	PolygonPoint &operator[](unsigned int index);
 	
-	void updateVisibility() { for(auto &it : polygons) it->updateVisibility(); }
+	void updateVisibility(Player &player);
 };
+
+PointType checkPoint(const Point &point, const Point &zeroPoint, float viewDistance);
+
+std::vector<Point> arcSegmentVSLineIntersection(const Point &p1, const Point &p2, const Point &center, float radius, const std::array<Vector, 3> &views);
+std::vector<Point> twoLinesVSLineIntersection(const Point &p1, const Point &p2, const Point &center, const std::array<Vector, 3> &views);

@@ -1,6 +1,56 @@
 #ifndef T5_COMMON_H
 #define T5_COMMON_H
 
+#include "headers.h"
+
+enum PointType{ //ordering is important
+    within = 0,
+    behind,
+    semicircle,
+    outside,
+};
+
+class Point{
+public:
+    float x, y;
+
+    Point(float X, float Y) : x(X) , y(Y) {}
+    float getDistance(const Point &point) const{
+        return (float) sqrt(pow((x - point.x), 2) + pow((y - point.y), 2));
+    }
+
+    Point operator+(const Vector &vector) const;
+    Point operator-(const Vector &vector) const;
+};
+
+class Vector : public Point{
+public:
+    Vector(const Point &from, const Point &to) : Point(to.x - from.x, to.y - from.y) {}
+    Vector(float X, float Y) : Point(X, Y) {}
+
+    float operator*(const Point &point) const{
+        return (x * point.x + y * point.y);
+    }
+
+    float cross(const Point &point) const{
+        return (x * point.y - y * point.x);
+    }
+
+    friend Vector operator*(const Vector &v, float k){
+        return { v.x * k, v.y * k };
+    }
+
+    friend Vector operator*(float k, const Vector &v){
+        return { v.x * k, v.y * k };
+    }
+
+    Vector perpendicular() const {
+        return { y, -x };
+    }
+
+    float sqr()const { return (x * x + y * y); }
+};
+
 const int screen_width = 800;
 const int screen_height = 600;
 const int point_radius = 2;
@@ -15,10 +65,10 @@ constexpr float degToRad(float degrees){ return (float) (degrees * M_PI / 180); 
 constexpr float radToDeg(float radians){ return (float) (radians * 180 / M_PI); }
 
 inline float getAngleToZero(const sf::Vector2f &a){
-	if (a.x > 0)
-		return (float) acos((-1 * a.y) / sqrt(pow(a.x, 2) + pow(a.y, 2)));
+	if (a.y > 0)
+		return (float) acos((a.x) / sqrt(pow(a.x, 2) + pow(a.y, 2)));
 	else
-		return (float) (2 * M_PI - acos((-1 * a.y) / sqrt(pow(a.x, 2) + pow(a.y, 2))));
+		return (float) (2 * M_PI - acos((a.x) / sqrt(pow(a.x, 2) + pow(a.y, 2))));
 }
 
 #endif //T5_COMMON_H

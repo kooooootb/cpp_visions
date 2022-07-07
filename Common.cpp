@@ -37,3 +37,11 @@ void initViewSector(std::shared_ptr<sf::ConvexShape> &viewShape, float viewDista
 	
 	viewShape->setPoint(index, sf::Vector2f(0, 0));
 }
+
+Point Point::operator+(const Vector &vector) const {
+    return { x + vector.x, y + vector.y };
+}
+
+Point Point::operator-(const Vector &vector) const {
+    return { x - vector.x, y - vector.y };
+}

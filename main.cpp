@@ -8,102 +8,10 @@
 
 #include "file.h"
 #include "Common.h"
+#include "Player.h"
 
 //type for kd tree
 using my_kd_tree_t = nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<float, Polygons>,Polygons, 2>;
-
-class Player{
-private:
-	float x = (float) screen_width / 2;
-	float y = (float) screen_height / 2;
-	float dx = 0, dy = 0;
-	constexpr static float friction = 0.5;
-	constexpr static float step = 1;
-	constexpr static float viewDistance = 100;
-	constexpr static float shapeRadius = 6;
-	constexpr static float viewAngle = degToRad(60);
-	
-	std::shared_ptr<sf::CircleShape> playerShape;
-	std::shared_ptr<sf::ConvexShape> viewShape;
-public:
-	Player() {
-		playerShape = std::make_shared<sf::CircleShape>(shapeRadius);
-		playerShape->setFillColor(sf::Color(226, 143, 40));
-		playerShape->setPosition(x, y);
-		playerShape->setOrigin(shapeRadius, shapeRadius);
-		
-		viewShape = std::make_shared<sf::ConvexShape>(viewDistance);
-		viewShape->setFillColor(sf::Color::Transparent);
-		viewShape->setOutlineColor(sf::Color(255, 51, 33));
-		viewShape->setOutlineThickness(1);
-		viewShape->setPosition(x, y);
-		
-		initViewSector(viewShape, viewDistance, viewAngle);
-	}
-	
-	~Player() = default;
-	
-	float getX()const { return x; }
-	float getY()const { return y; }
-	const std::shared_ptr<sf::CircleShape> &getPlayerShape() const { return playerShape; }
-	const std::shared_ptr<sf::ConvexShape> &getViewShape() const { return viewShape; }
-	
-	void accelerate(float dX, float dY){
-		this->dx += dX * step;
-		this->dy += dY * step;
-	}
-	
-	void move(sf::Vector2i vector){
-		this->x += (float) vector.x;
-		this->y += (float) vector.y;
-	}
-	
-	inline static void updateCoord(float &coord, float &d, float limit){
-		coord += d;
-		
-		if(coord >= limit){
-			coord = limit;
-			d = 0;
-		}
-		else if(coord <= 0){
-			coord = 0;
-			d = 0;
-		}
-	}
-	
-	void update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &mousePos){
-		//rotate view sector:
-		viewShape->setRotation(radToDeg(
-				getAngleToZero(sf::Vector2f((float) mousePos.x - x, (float) mousePos.y - y))));
-		
-		//set player coords:
-		updateCoord(x, dx, screen_width);
-		updateCoord(y, dy, screen_height);
-		
-		dx = std::abs(dx) > friction ? (dx > 0 ? dx - friction : dx + friction) : 0;
-		dy = std::abs(dy) > friction ? (dy > 0 ? dy - friction : dy + friction) : 0;
-		
-		playerShape->setPosition(x, y);
-		viewShape->setPosition(x, y);
-		
-		//set forms' shapes:
-		std::vector<std::pair<uint32_t, float>> ret_matches;
-		
-		const float query[2] = {x, y};
-		nanoflann::SearchParams params;
-		
-		const size_t nMatches = tree.radiusSearch(query, viewDistance * viewDistance, ret_matches, params);
-		
-		polygons.hideAll();
-		for(auto &pair : ret_matches){
-			polygons[pair.first].polygon.makeVisible();
-		}
-		
-		polygons.updateVisibility();
-		
-//		std::cout << nMatches << std::endl;
-	}
-};
 
 int main(){
 	//level save file
@@ -132,7 +40,7 @@ int main(){
 	//set player
 	Player player;
 	defShapes.push_back(player.getPlayerShape());
-	defShapes.push_back(player.getViewShape());
+//	defShapes.push_back(player.getViewShape());
 	
 	//variables:
 	bool moveByMouse = false;

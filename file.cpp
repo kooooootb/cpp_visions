@@ -91,7 +91,7 @@ Polygons loadLevelForTree(const std::string &fname){
 				float x, y;
 				fd.read(reinterpret_cast<char *>(&x), sizeof(x));
 				fd.read(reinterpret_cast<char *>(&y), sizeof(y));
-				pol->addBPoint(Point(*pol, x, y));
+				pol->addBPoint(PolygonPoint(*pol, x, y));
 			}
 			pol->endAdding();
 			
