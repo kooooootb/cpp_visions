@@ -63,7 +63,7 @@ void Polygon::setPointsType(const Player &player, const std::array<Vector, 3> &v
             point.type = behind;
         } else if (pointVector.sqr() > std::pow(radius, 2)) {
             point.type = outside;
-        } else if (views[0].cross(pointVector) * pointVector.cross(views[2]) >= 0) {
+        } else if (!isOutOfBoarders(pointVector, views)) {
             point.type = within;
         } else {
             point.type = semicircle;
@@ -258,6 +258,11 @@ Point rayCheck(const Point &center, float radius, const Vector &pointVector, con
     return hitPoint;
 }
 
+bool isOutOfBoarders(const Vector &pointVector, const std::array<Vector, 3> &views){
+    return (views[0].cross(pointVector) * pointVector.cross(views[2]) < 0);
+}
+
+
 void Polygons::updateVisibility(Player &player
 #ifdef T5_DEBUG
                                 , sf::RenderWindow &window
@@ -322,7 +327,7 @@ void Polygons::updateVisibility(Player &player
                             std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint,
                                                                                            center, views);
                             edgePoints.push_back(intersectPoint.front());
-                            blockingEdges.emplace_back(previousPoint, intersectPoint.front());
+                            blockingEdges.emplace_back(previousPoint, currentPoint);
                             break;
                         }
                         case semicircle: {
@@ -331,7 +336,7 @@ void Polygons::updateVisibility(Player &player
                             std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint,
                                                                                            center, views);
                             edgePoints.push_back(intersectPoint.front());
-                            blockingEdges.emplace_back(previousPoint, intersectPoint.front());
+                            blockingEdges.emplace_back(previousPoint, currentPoint);
                             break;
                         }
                         case outside: {
@@ -342,12 +347,11 @@ void Polygons::updateVisibility(Player &player
                             if (intersectPoint.empty()) {
                                 intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint, center, views);
                                 edgePoints.push_back(intersectPoint.front());
-                                blockingEdges.emplace_back(previousPoint, intersectPoint.front());
                             }
                             else{
                                 arcPoints.push_back(intersectPoint.front());
-                                blockingEdges.emplace_back(previousPoint, intersectPoint.front());
                             }
+                            blockingEdges.emplace_back(previousPoint, currentPoint);
                             break;
                         }
                     }
@@ -367,17 +371,17 @@ void Polygons::updateVisibility(Player &player
                                 if(intersectPoint.size() == 2){
                                     arcPoints.push_back(intersectPoint.front());
                                     arcPoints.push_back(intersectPoint.back());
-                                    blockingEdges.emplace_back(intersectPoint.front(), intersectPoint.back());
+                                    blockingEdges.emplace_back(previousPoint, currentPoint);
                                 }
                             } else if(intersectPoint.size() == 1) {
                                 edgePoints.push_back(intersectPoint.front());
                                 intersectPoint = arcSegmentVSLineIntersection(previousPoint, currentPoint, center, radius, views);
                                 arcPoints.push_back(intersectPoint.front());
-                                blockingEdges.emplace_back(*std::prev(edgePoints.end(), 1), *std::prev(arcPoints.end(), 1));
+                                blockingEdges.emplace_back(previousPoint, currentPoint);
                             } else{
                                 edgePoints.push_back(intersectPoint.front());
                                 edgePoints.push_back(intersectPoint.back());
-                                blockingEdges.emplace_back(*std::prev(edgePoints.end(), 2), *std::prev(edgePoints.end(), 1));
+                                blockingEdges.emplace_back(previousPoint, currentPoint);
                             }
                             break;
                         }
@@ -388,7 +392,7 @@ void Polygons::updateVisibility(Player &player
                             if(!intersectPoint.empty()){
                                 edgePoints.push_back(intersectPoint.front());
                                 edgePoints.push_back(intersectPoint.back());
-                                blockingEdges.emplace_back(*std::prev(edgePoints.end(), 2), *std::prev(edgePoints.end(), 1));
+                                blockingEdges.emplace_back(previousPoint, currentPoint);
                             }
                             break;
                         }
@@ -398,58 +402,51 @@ void Polygons::updateVisibility(Player &player
                     switch (current){
                         case semicircle: {
                             //semicircle - semicircle
-                            std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint,
-                                                                                           center, views);
+                            std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint, center, views);
                             if (!intersectPoint.empty()) {
                                 edgePoints.push_back(intersectPoint.front());
                                 edgePoints.push_back(intersectPoint.back());
-                                blockingEdges.emplace_back(*std::prev(edgePoints.end(), 2), *std::prev(edgePoints.end(), 1));
+                                blockingEdges.emplace_back(previousPoint, currentPoint);
                             }
                             break;
                         }
                         case outside:
                             //semicircle - outside
-                            std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint,
-                                                                                           center, views);
+                            std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint, center, views);
                             if (intersectPoint.size() == 2) {
                                 edgePoints.push_back(intersectPoint.front());
                                 edgePoints.push_back(intersectPoint.back());
-                                blockingEdges.emplace_back(*std::prev(edgePoints.end(), 2), *std::prev(edgePoints.end(), 1));
+                                blockingEdges.emplace_back(previousPoint, currentPoint);
                             } else if(intersectPoint.size() == 1){
                                 edgePoints.push_back(intersectPoint.front());
                                 intersectPoint = arcSegmentVSLineIntersection(previousPoint, currentPoint, center, radius, views);
                                 arcPoints.push_back(intersectPoint.front());
-                                blockingEdges.emplace_back(*std::prev(arcPoints.end(), 1), *std::prev(edgePoints.end(), 1));
+                                blockingEdges.emplace_back(previousPoint, currentPoint);
                             }
                             break;
                     }
                     break;
                 case outside: {
                     //outside - outside
-                    std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint,
-                                                                                   center, views);
+                    std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint, center, views);
                     if (intersectPoint.empty()) {//2 on arc
-                        intersectPoint = arcSegmentVSLineIntersection(previousPoint, currentPoint,
-                                                                      center, radius, views);
+                        intersectPoint = arcSegmentVSLineIntersection(previousPoint, currentPoint, center, radius, views);
                         if (intersectPoint.size() == 2) {
                             arcPoints.push_back(intersectPoint.front());
                             arcPoints.push_back(intersectPoint.back());
-                            blockingEdges.emplace_back(*std::prev(arcPoints.end(), 2),
-                                                       *std::prev(arcPoints.end(), 1));
+                            blockingEdges.emplace_back(previousPoint, currentPoint);
                         }
                     } else if (intersectPoint.size() == 1) {//1 on edge, 1 on arc
                         edgePoints.push_back(intersectPoint.front());
-                        intersectPoint = arcSegmentVSLineIntersection(previousPoint, currentPoint,
-                                                                      center, radius, views);
+                        intersectPoint = arcSegmentVSLineIntersection(previousPoint, currentPoint, center, radius, views);
                         if (intersectPoint.size() == 1) {
                             arcPoints.push_back(intersectPoint.front());
-                            blockingEdges.emplace_back(*std::prev(arcPoints.end(), 1),
-                                                       *std::prev(edgePoints.end(), 1));
+                            blockingEdges.emplace_back(previousPoint, currentPoint);
                         }
                     } else {//2 on edges
                         edgePoints.push_back(intersectPoint.front());
                         edgePoints.push_back(intersectPoint.back());
-                        blockingEdges.emplace_back(*std::prev(edgePoints.end(), 2), *std::prev(edgePoints.end(), 1));
+                        blockingEdges.emplace_back(previousPoint, currentPoint);
                     }
 
                     break;
@@ -552,7 +549,9 @@ void Polygons::updateVisibility(Player &player
         hitPoints.push_back(rayCheck(center, radius, pointVector, blockingEdges));
 
         pointVector.rotate(degToRad(1));
-        hitPoints.push_back(rayCheck(center, radius, pointVector, blockingEdges));
+        if(!isOutOfBoarders(pointVector, views)){
+            hitPoints.push_back(rayCheck(center, radius, pointVector, blockingEdges));
+        }
 
         pointVector.rotate(degToRad(-2));
         hitPoints.push_back(rayCheck(center, radius, pointVector, blockingEdges));
@@ -593,6 +592,7 @@ void Polygons::updateVisibility(Player &player
     //set convex
     std::shared_ptr<sf::ConvexShape> &convex = player.getViewShape();
     size_t convexSize = resPoints.size();
+    std::cout << convexSize << std::endl;
     convex->setPointCount(convexSize);
 
     int i = 0;

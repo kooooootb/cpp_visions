@@ -95,4 +95,6 @@ inline float getAngleToZero(const sf::Vector2f &a){
 		return (float) (2 * M_PI - acos((a.x) / sqrt(pow(a.x, 2) + pow(a.y, 2))));
 }
 
+bool isOutOfBoarders(const Vector &pointVector, const std::array<Vector, 3> &views);
+
 #endif //T5_COMMON_H
