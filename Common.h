@@ -15,21 +15,34 @@ public:
     float x, y;
 
     Point(float X, float Y) : x(X) , y(Y) {}
+
+    Point() = default;
+
     float getDistance(const Point &point) const{
         return (float) sqrt(pow((x - point.x), 2) + pow((y - point.y), 2));
     }
 
     Point operator+(const Vector &vector) const;
     Point operator-(const Vector &vector) const;
+
+    bool operator!=(const Point &point) const{
+        return x != point.x || y != point.y;
+    }
 };
 
 class Vector : public Point{
 public:
     Vector(const Point &from, const Point &to) : Point(to.x - from.x, to.y - from.y) {}
     Vector(float X, float Y) : Point(X, Y) {}
+    Vector(const Vector &vector) : Point(vector.x, vector.y) {}
+    Vector() = default;
 
     float operator*(const Point &point) const{
         return (x * point.x + y * point.y);
+    }
+
+    bool operator!=(const Vector &vector) const{
+        return x != vector.x || y != vector.y;
     }
 
     float cross(const Point &point) const{
@@ -49,6 +62,17 @@ public:
     }
 
     float sqr()const { return (x * x + y * y); }
+    float length()const { return sqrt(x * x + y * y); }
+    void increase(float k) { x *= k; y *= k; }
+    void move(float dx, float dy) { x += dx; y += dy; }
+    void rotate(float radians) {
+        float cs = cos(radians);
+        float sn = sin(radians);
+
+        float newX = x * cs - y * sn;
+        y = x * sn + y * cs;
+        x = newX;
+    }
 };
 
 const int screen_width = 800;

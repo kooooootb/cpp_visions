@@ -88,3 +88,4 @@ public:
 
 std::vector<Point> arcSegmentVSLineIntersection(const Point &p1, const Point &p2, const Point &center, float radius, const std::array<Vector, 3> &views);
 std::vector<Point> twoLinesVSLineIntersection(const Point &p1, const Point &p2, const Point &center, const std::array<Vector, 3> &views);
+std::vector<Point> lineVSLineIntersection(const Point &p1, const Point &p2, const Point &p3, const Point &p4);

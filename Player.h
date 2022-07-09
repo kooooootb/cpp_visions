@@ -36,6 +36,7 @@ public:
     float getViewAngle()const { return viewAngle; }
     const std::shared_ptr<sf::CircleShape> &getPlayerShape() const { return playerShape; }
     const std::shared_ptr<sf::ConvexShape> &getViewShape() const { return viewShape; }
+    std::shared_ptr<sf::ConvexShape> &getViewShape() { return viewShape; }
 
     void accelerate(float dX, float dY){
         this->dx += dX * step;

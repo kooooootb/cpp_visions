@@ -9,10 +9,10 @@ Player::Player() : position((float) screen_width / 2, (float) screen_height / 2)
     playerShape->setPosition(position.x, position.y);
     playerShape->setOrigin(shapeRadius, shapeRadius);
 
-//		viewShape = std::make_shared<sf::ConvexShape>(viewDistance);
-//		viewShape->setFillColor(sf::Color::Transparent);
-//		viewShape->setOutlineColor(sf::Color(255, 51, 33));
-//		viewShape->setOutlineThickness(1);
+		viewShape = std::make_shared<sf::ConvexShape>(viewDistance);
+		viewShape->setFillColor(sf::Color(228, 228, 228));
+		viewShape->setOutlineColor(sf::Color(200, 200, 200));
+		viewShape->setOutlineThickness(1);
 //		viewShape->setPosition(x, y);
 
 //		initViewSector(viewShape, viewDistance, viewAngle);

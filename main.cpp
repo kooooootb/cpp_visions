@@ -40,7 +40,7 @@ int main(){
 	//set player
 	Player player;
 	defShapes.push_back(player.getPlayerShape());
-//	defShapes.push_back(player.getViewShape());
+	defShapes.push_back(player.getViewShape());
 	
 	//variables:
 	bool moveByMouse = false;
