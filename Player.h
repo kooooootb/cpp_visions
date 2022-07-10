@@ -2,8 +2,8 @@
 #include "nanoflann.hpp"
 
 #include <memory>
+#include <list>
 
-#include "headers.h"
 #include "Common.h"
 
 //type for kd tree
@@ -15,14 +15,13 @@ private:
     float dx = 0, dy = 0;
     float angle = 0;
 
-    constexpr static float friction = 0.5;
-    constexpr static float step = 1;
-    constexpr static float viewDistance = 200;
-    constexpr static float shapeRadius = 6;
-    constexpr static float viewAngle = degToRad(40);
+    constexpr static float friction = FRICTION;
+    constexpr static float step = STEP;
+    constexpr static float viewDistance = VIEWDISTANCE;
+    constexpr static float shapeRadius = SHAPERADIUS;
+    constexpr static float viewAngle = degToRad(VIEWANGLEDEG);
 
     std::shared_ptr<sf::CircleShape> playerShape;
-    std::shared_ptr<sf::ConvexShape> viewShape;
 public:
     Player();
 
@@ -31,12 +30,10 @@ public:
     float getX()const { return position.x; }
     float getY()const { return position.y; }
     const Point &getPosition()const { return position; }
-    float getViewDistance()const { return viewDistance; }
+    constexpr float getViewDistance()const { return viewDistance; }
     float getAngle()const { return angle; }
-    float getViewAngle()const { return viewAngle; }
+    constexpr float getViewAngle()const { return viewAngle; }
     const std::shared_ptr<sf::CircleShape> &getPlayerShape() const { return playerShape; }
-    const std::shared_ptr<sf::ConvexShape> &getViewShape() const { return viewShape; }
-    std::shared_ptr<sf::ConvexShape> &getViewShape() { return viewShape; }
 
     void accelerate(float dX, float dY){
         this->dx += dX * step;
@@ -61,7 +58,7 @@ public:
         }
     }
 
-    void update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &mousePos
+    std::list<std::shared_ptr<sf::Shape>> update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &mousePos
 #ifdef T5_DEBUG
                 , sf::RenderWindow &window
 #endif

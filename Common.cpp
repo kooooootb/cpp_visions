@@ -4,10 +4,16 @@
 #include <vector>
 #include <memory>
 #include <cmath>
+#include <iostream>
 
 #include "Common.h"
 
 void drawAll(sf::RenderWindow &window, const std::vector<std::shared_ptr<sf::Shape>> &shapes){
+	for(const auto &it : shapes){
+		window.draw(*it);
+	}
+}
+void drawAll(sf::RenderWindow &window, const std::list<std::shared_ptr<sf::Shape>> &shapes){
 	for(const auto &it : shapes){
 		window.draw(*it);
 	}
@@ -21,22 +27,38 @@ void createBackground(std::vector<std::shared_ptr<sf::Shape>> &shapes){
 	shapes.push_back(backgroundShape);
 }
 
-void initViewSector(std::shared_ptr<sf::ConvexShape> &viewShape, float viewDistance, float viewAngle){
-	int dotsAmount = (int) (viewDistance * viewAngle);//dots in arc
-	
-	int index = 0;
-	viewShape->setPointCount(dotsAmount + 1);
-	float dAngle = viewAngle / (float) (dotsAmount - 1);
-	float currentAngle = M_PI_2 + viewAngle / 2.0;
-	
+int initViewSector(std::shared_ptr<sf::ConvexShape> &viewShape, const Point &center, float viewDistance, float currentAngle, float viewAngle){
+    if(viewAngle > currentAngle){
+        viewAngle -= 2 * M_PI;
+    }
+    viewAngle = currentAngle - viewAngle;
+
+	int dotsAmount = (int) (viewDistance * viewAngle) - 2;//dots in arc
+
+    if(dotsAmount < 1){
+        return 2;
+    }
+
+    sf::Vector2f first = viewShape->getPoint(0);
+    sf::Vector2f second = viewShape->getPoint(1);
+
+	viewShape->setPointCount(dotsAmount + 3);//1 point reserved for center
+
+    viewShape->setPoint(0, first);
+    viewShape->setPoint(1, second);
+
+	float dAngle = viewAngle / (float) (dotsAmount + 1);
+    currentAngle -= dAngle;
+
+    int index = 0;
 	for(;index < dotsAmount;++index){
-		viewShape->setPoint(index, sf::Vector2f((float) (viewDistance * cos((double) currentAngle)),
-												(float) (-1 * viewDistance * sin((double) currentAngle))));
+		viewShape->setPoint(index + 2, sf::Vector2f((float) (center.x + viewDistance * cos((double) currentAngle)),
+												(float) (center.y + viewDistance * sin((double) currentAngle))));
 		
-		currentAngle = currentAngle - dAngle;
+		currentAngle -= dAngle;
 	}
-	
-	viewShape->setPoint(index, sf::Vector2f(0, 0));
+
+    return dotsAmount + 2;
 }
 
 Point Point::operator+(const Vector &vector) const {

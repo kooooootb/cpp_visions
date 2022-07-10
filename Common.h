@@ -80,10 +80,11 @@ const int screen_height = 600;
 const int point_radius = 2;
 
 void drawAll(sf::RenderWindow &window, const std::vector<std::shared_ptr<sf::Shape>> &shapes);
+void drawAll(sf::RenderWindow &window, const std::list<std::shared_ptr<sf::Shape>> &shapes);
 
 void createBackground(std::vector<std::shared_ptr<sf::Shape>> &shapes);
 
-void initViewSector(std::shared_ptr<sf::ConvexShape> &viewShape, float viewDistance, float viewAngle);
+int initViewSector(std::shared_ptr<sf::ConvexShape> &viewShape, const Point &center, float viewDistance, float currentAngle, float viewAngle);
 
 constexpr float degToRad(float degrees){ return (float) (degrees * M_PI / 180); }
 constexpr float radToDeg(float radians){ return (float) (radians * 180 / M_PI); }

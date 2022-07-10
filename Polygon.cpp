@@ -199,7 +199,7 @@ std::vector<Point> lineVSLineIntersection(const Point &p1, const Vector &d0, con
     if(denominator != 0){
         float t = (delta * (d0.perpendicular())) / denominator;
         float s = (delta * (d1.perpendicular())) / denominator;
-        if(t >= 0 && t <= 1){
+        if(t >= 0 && t <= 1 && s >= 0){
             Point cross = p3 + (t * d1);
             res.emplace_back(cross);
         }
@@ -262,8 +262,45 @@ bool isOutOfBoarders(const Vector &pointVector, const std::array<Vector, 3> &vie
     return (views[0].cross(pointVector) * pointVector.cross(views[2]) < 0);
 }
 
+Point calcClosestPoint(const Edge &edge, const Point &point){
+    if (edge.first.x == edge.second.x){
+        return { edge.first.x, point.y };
+    }
+    if (edge.first.y == edge.second.y){
+        return { point.x, edge.first.x };
+    }
+    float m1 = (edge.second.y - edge.first.y) / (edge.second.x - edge.first.x);
+    float m2 = -1 / m1;
+    float x = (m1 * edge.first.x - m2 * point.x + point.y - edge.first.y) / (m1 - m2);
+    return {
+            x,
+            m2 * (x - point.x) + point.y
+    };
+}
 
-void Polygons::updateVisibility(Player &player
+bool findClosestEdge(const std::vector<Edge> &edges, Edge &edge, const Point &point){
+    if(edges.empty()){
+        return false;
+    }
+
+    float minDistSqr = Vector(point, calcClosestPoint(edges.front(), point)).sqr();
+    const Edge *edgePtr = &edges.front();
+
+    for(auto it = edges.cbegin() + 1, endIt = edges.end();it < endIt;++it){
+        float distSqr = Vector(point, calcClosestPoint(edges.front(), point)).sqr();
+
+        if(distSqr < minDistSqr){
+            edgePtr = &(*it);
+            minDistSqr = distSqr;
+        }
+    }
+
+    edge = *edgePtr;
+    return true;
+}
+
+
+std::list<std::shared_ptr<sf::Shape>> Polygons::updateVisibility(Player &player
 #ifdef T5_DEBUG
                                 , sf::RenderWindow &window
 #endif
@@ -505,36 +542,6 @@ void Polygons::updateVisibility(Player &player
 
     //ray check
     std::vector<Point> hitPoints;
-//    Point leftPoint, rightPoint;
-//    float leftDistance = radius * radius, rightDistance = radius * radius;
-//    for(const auto &point : edgePoints){
-//        Vector pointVector(center, point);
-//        if(views[1].cross(pointVector) > 0){//right
-//            if(pointVector.sqr() < rightDistance){
-//                rightPoint = point;
-//                rightDistance = pointVector.sqr();
-//            }
-//        }else{//left
-//            if(pointVector.sqr() < leftDistance){
-//                leftPoint = point;
-//                leftDistance = pointVector.sqr();
-//            }
-//        }
-//    }
-//
-//    if(leftDistance != radius * radius){
-//        hitPoints.push_back(leftPoint);
-//    }
-//    else{
-//        hitPoints.push_back(center + views[2]);
-//    }
-//    if(rightDistance != radius * radius){
-//        hitPoints.push_back(rightPoint);
-//    }
-//    else{
-//        hitPoints.push_back(center + views[0]);
-//    }
-
     for(int i = 0;i < 2;++i){
         Vector pointVector(center, center + views[2 * i]);
         hitPoints.push_back(rayCheck(center, radius, pointVector, blockingEdges));
@@ -544,6 +551,7 @@ void Polygons::updateVisibility(Player &player
         Vector pointVector(center, point);
         hitPoints.push_back(rayCheck(center, radius, pointVector, blockingEdges));
     }
+
     for(const auto &point : endPoints){//create 2 auxiliary points
         Vector pointVector(center, point);
         hitPoints.push_back(rayCheck(center, radius, pointVector, blockingEdges));
@@ -554,13 +562,15 @@ void Polygons::updateVisibility(Player &player
         }
 
         pointVector.rotate(degToRad(-2));
-        hitPoints.push_back(rayCheck(center, radius, pointVector, blockingEdges));
+        if(!isOutOfBoarders(pointVector, views)){
+            hitPoints.push_back(rayCheck(center, radius, pointVector, blockingEdges));
+        }
     }
 
 #ifdef T5_DEBUG
     for(const auto &point : hitPoints){
         sf::CircleShape circle(4);
-        circle.setFillColor(sf::Color::Green);
+        circle.setFillColor(sf::Color::Yellow);
         circle.setOrigin(4, 4);
         circle.setPosition(point.x, point.y);
         window.draw(circle);
@@ -577,28 +587,63 @@ void Polygons::updateVisibility(Player &player
 
     //get rid of points at the same angle from center
     std::vector<Point> resPoints;
-    auto prevIt = hitPoints.end();
-    for(auto it = hitPoints.begin(), endIt = hitPoints.end();it < endIt;++it){
+    for(auto it = hitPoints.begin(), prevIt = hitPoints.end(), endIt = hitPoints.end();it < endIt;++it){
         Vector itVector(center, *it);
 
-        if (prevIt == hitPoints.end() || itVector.cross(Vector(center, *prevIt)) != 0) {
+        if (prevIt == hitPoints.end() || std::abs(itVector.cross(Vector(center, *prevIt))) > epsilon) {
             resPoints.push_back(*it);
         }
 
         prevIt = it;
     }
-    resPoints.push_back(center);
 
     //set convex
-    std::shared_ptr<sf::ConvexShape> &convex = player.getViewShape();
-    size_t convexSize = resPoints.size();
-    std::cout << convexSize << std::endl;
-    convex->setPointCount(convexSize);
+    std::list<std::shared_ptr<sf::Shape>> convexs;
+    float dist = Vector(center, resPoints.front()).sqr();
+    float diff = std::abs(dist - radius * radius);
+    bool prevLiesOnArc = diff < epsilon;
+    for(auto it = resPoints.begin() + 1, prevIt = resPoints.begin(), endIt = resPoints.end();it < endIt;++it, ++prevIt){
+        int pointCount = 3;
+        std::shared_ptr<sf::ConvexShape> convex = std::make_shared<sf::ConvexShape>(pointCount);
+        dist = Vector(center, *it).sqr();
+        diff = std::abs(dist- radius * radius);
+        bool usedArc = false, itLiesOnArc = diff < epsilon;
 
-    int i = 0;
-    for(const auto &it : resPoints){
-        convex->setPoint(i, sf::Vector2f(it.x, it.y));
+        if(prevLiesOnArc && itLiesOnArc){
+            Edge closestEdge;
+            bool edgeFound = findClosestEdge(blockingEdges, closestEdge, *it);
 
-        ++i;
+            if(edgeFound && std::abs(Vector(closestEdge.first, closestEdge.second).cross(Vector(*it, *prevIt))) > epsilon || !edgeFound) {
+                Vector prevVector(center, *prevIt);
+                Vector itVector(center, *it);
+                Vector zeroVector(1, 0);
+
+                float prevAngle = prevVector.y > 0 ? acos((zeroVector * prevVector) / radius) : 2 * M_PI - acos((zeroVector * prevVector) / radius) ;
+                float itAngle = itVector.y > 0 ? acos((zeroVector * itVector) / radius) : 2 * M_PI - acos((zeroVector * itVector) / radius) ;
+
+                convex->setPoint(0, sf::Vector2f(center.x, center.y));
+                convex->setPoint(1, sf::Vector2f(it->x, it->y));
+                int index = initViewSector(convex, center, radius,
+                               itAngle,
+                               prevAngle
+                );
+                convex->setPoint(index, sf::Vector2f(prevIt->x, prevIt->y));
+                usedArc = true;
+            }
+        }
+
+        convex->setFillColor(sf::Color(228, 228, 228));
+        convex->setOutlineThickness(0);
+        if(!usedArc){
+            convex->setPoint(0, sf::Vector2f(center.x, center.y));
+            convex->setPoint(1, sf::Vector2f(prevIt->x, prevIt->y));
+            convex->setPoint(2, sf::Vector2f(it->x, it->y));
+        }
+
+        convexs.push_back(convex);
+
+        prevLiesOnArc = itLiesOnArc;
     }
+
+    return convexs;
 }

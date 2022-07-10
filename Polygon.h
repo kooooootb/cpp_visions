@@ -5,7 +5,6 @@
 #include <cmath>
 #include <memory>
 
-#include "headers.h"
 #include "Common.h"
 
 class PolygonPoint : public Point{
@@ -79,7 +78,7 @@ public:
 	void hideAll();
 	PolygonPoint &operator[](unsigned int index);
 	
-	void updateVisibility(Player &player
+	std::list<std::shared_ptr<sf::Shape>> updateVisibility(Player &player
 #ifdef T5_DEBUG
                           , sf::RenderWindow &window
 #endif
