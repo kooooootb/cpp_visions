@@ -1,6 +1,10 @@
 #ifndef T5_COMMON_H
 #define T5_COMMON_H
 
+#include <memory>
+#include <list>
+#include <limits>
+
 #include "headers.h"
 
 enum PointType{ //ordering is important
@@ -14,9 +18,9 @@ class Point{
 public:
     float x, y;
 
-    Point(float X, float Y) : x(X) , y(Y) {}
-
     Point() = default;
+    Point(float X, float Y) : x(X) , y(Y) {}
+    Point(const sf::Vector2i &vector) : x((float) vector.x) , y((float) vector.y) {}
 
     float getDistance(const Point &point) const{
         return (float) sqrt(pow((x - point.x), 2) + pow((y - point.y), 2));
@@ -27,6 +31,14 @@ public:
 
     bool operator!=(const Point &point) const{
         return x != point.x || y != point.y;
+    }
+
+    bool operator==(const sf::Vector2i &vector)const{
+        return x == vector.x && y == vector.y;
+    }
+
+    bool operator==(const Point &point) const{
+        return x == point.x && y == point.y;
     }
 };
 
@@ -75,14 +87,6 @@ public:
     }
 };
 
-const int screen_width = 800;
-const int screen_height = 600;
-const int point_radius = 2;
-
-void drawAll(sf::RenderWindow &window, const std::vector<std::shared_ptr<sf::Shape>> &shapes);
-void drawAll(sf::RenderWindow &window, const std::list<std::shared_ptr<sf::Shape>> &shapes);
-
-void createBackground(std::vector<std::shared_ptr<sf::Shape>> &shapes);
 
 int initViewSector(std::shared_ptr<sf::ConvexShape> &viewShape, const Point &center, float viewDistance, float currentAngle, float viewAngle);
 
@@ -97,5 +101,14 @@ inline float getAngleToZero(const sf::Vector2f &a){
 }
 
 bool isOutOfBoarders(const Vector &pointVector, const std::array<Vector, 3> &views);
+
+Point calcClosestPoint(const Edge &edge, const Point &point);
+bool findClosestEdge(const std::vector<Edge> &edges, Edge &edge, const Point &point);
+
+void saveLevel(const std::string &fname, const std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &polygons);
+void loadLevel(std::vector<std::shared_ptr<sf::Shape>> &shapes, const std::string &fname, std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &polygons);
+Polygons loadLevelForTree(const std::string &fname);
+
+Point findNearestPoint(const Point &center, const std::vector<Point> &points);
 
 #endif //T5_COMMON_H

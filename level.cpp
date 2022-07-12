@@ -4,7 +4,6 @@
 #include <vector>
 #include <memory>
 
-#include "file.h"
 #include "Common.h"
 
 void drawLines(sf::RenderWindow &window, const sf::VertexArray &lines){
@@ -12,8 +11,6 @@ void drawLines(sf::RenderWindow &window, const sf::VertexArray &lines){
 }
 
 int main(){
-	const static std::string fname = "level.bin";
-	
 	sf::RenderWindow window(sf::VideoMode(screen_width, screen_height), "15");
 	window.setFramerateLimit(60);
 	
@@ -25,7 +22,7 @@ int main(){
 	
 	std::shared_ptr<std::list<sf::Vector2f>> curCoords = std::make_shared<std::list<sf::Vector2f>>();
 	
-	loadLevel(shapes, fname, polygons);
+	loadLevel(shapes, levelFname, polygons);
 	
 	sf::Event event{};
 	while (window.isOpen()) {
@@ -101,7 +98,7 @@ int main(){
 	}
 	
 	//save in file
-	saveLevel(fname, polygons);
+	saveLevel(levelFname, polygons);
 	
 	return 0;
 }

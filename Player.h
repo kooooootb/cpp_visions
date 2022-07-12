@@ -1,39 +1,43 @@
-#include "SFML/Graphics.hpp"
-#include "nanoflann.hpp"
-
 #include <memory>
 #include <list>
 
+#include "Entity.h"
 #include "Common.h"
 
 //type for kd tree
 using my_kd_tree_t = nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<float, Polygons>,Polygons, 2>;
 
-class Player{
+class Player : public Entity{
 private:
-    Point position;
     float dx = 0, dy = 0;
-    float angle = 0;
 
-    constexpr static float friction = FRICTION;
-    constexpr static float step = STEP;
-    constexpr static float viewDistance = VIEWDISTANCE;
-    constexpr static float shapeRadius = SHAPERADIUS;
-    constexpr static float viewAngle = degToRad(VIEWANGLEDEG);
+    float health = 1;
+    float damage = 100;//dealing damage
 
-    std::shared_ptr<sf::CircleShape> playerShape;
+    const float friction;
+    const float step;
+    const float viewDistance;
+    const float shapeRadius;
+    const float viewAngle;
+
+    std::vector<Edge> blockingEdges;
+
+    void updateSpeed();
 public:
     Player();
+    Player(std::vector<float> args);
 
     ~Player() = default;
 
-    float getX()const { return position.x; }
-    float getY()const { return position.y; }
-    const Point &getPosition()const { return position; }
+    static std::vector<float> loadCharacter(const std::string &fname);
+
     constexpr float getViewDistance()const { return viewDistance; }
     float getAngle()const { return angle; }
     constexpr float getViewAngle()const { return viewAngle; }
-    const std::shared_ptr<sf::CircleShape> &getPlayerShape() const { return playerShape; }
+    std::vector<Edge> &getBlockingEdges() { return blockingEdges; }
+    const std::vector<Edge> &getBlockingEdges() const{ return blockingEdges; }
+    float getRadius() const{ return shapeRadius; }
+    float getDamage() const{ return damage; }
 
     void accelerate(float dX, float dY){
         this->dx += dX * step;
@@ -58,9 +62,29 @@ public:
         }
     }
 
-    std::list<std::shared_ptr<sf::Shape>> update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &mousePos
+    void update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &mousePos, const std::vector<std::shared_ptr<Player>> &enemies,
+                std::list<std::shared_ptr<sf::Shape>> &viewShape
 #ifdef T5_DEBUG
                 , sf::RenderWindow &window
 #endif
                 );
+
+    bool takeDamage(float dealtDamage){
+        if(dealtDamage >= health){
+            return true;
+        }else{
+            health -= dealtDamage;
+            return false;
+        }
+    }
+
+    bool shoot(const std::vector<std::shared_ptr<Player>> &enemies, Point &where, std::shared_ptr<Player> &target);
+
+    void setVisibility(bool visible){
+        if(visible){
+            shape->setFillColor(shapeColor);
+        }else{
+            shape->setFillColor(sf::Color::Transparent);
+        }
+    }
 };

@@ -4,9 +4,11 @@ project(t5)
 set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_OUTPUT_PATH ../files)
 
-add_executable(t5 main.cpp file.cpp Common.cpp Polygon.cpp Polygon.h Polygon.cpp Player.cpp Player.h headers.h)
+add_executable(t5 main.cpp Common.cpp Polygon.cpp Polygon.h Polygon.cpp Player.cpp Player.h headers.h Game.cpp Game.h Entity.cpp Entity.h)
 
-add_executable(level level.cpp file.cpp Common.cpp Polygon.cpp Polygon.h)
+add_executable(level level.cpp Common.cpp Polygon.cpp Polygon.h)
+
+add_executable(characterFile character.cpp character.cpp)
 
 #sfml libs
 set(BUILD_SHARED_LIBS FALSE)

@@ -1,5 +1,3 @@
-#include "SFML/Graphics.hpp"
-
 #include <vector>
 #include <list>
 #include <cmath>
@@ -76,9 +74,11 @@ public:
 	//------------------------------------------------------------------
 	
 	void hideAll();
+    std::vector<Edge> collectEdges();
 	PolygonPoint &operator[](unsigned int index);
 	
-	std::list<std::shared_ptr<sf::Shape>> updateVisibility(Player &player
+	void updateVisibility(Player &player, const std::vector<std::shared_ptr<Player>> &enemies,
+                          std::list<std::shared_ptr<sf::Shape>> &viewShape
 #ifdef T5_DEBUG
                           , sf::RenderWindow &window
 #endif
@@ -86,5 +86,10 @@ public:
 };
 
 std::vector<Point> arcSegmentVSLineIntersection(const Point &p1, const Point &p2, const Point &center, float radius, const std::array<Vector, 3> &views);
+std::vector<Point> circleVSLineIntersection(const Point &p1, const Point &p2, const Point &center, float radius);
 std::vector<Point> twoLinesVSLineIntersection(const Point &p1, const Point &p2, const Point &center, const std::array<Vector, 3> &views);
-std::vector<Point> lineVSLineIntersection(const Point &p1, const Point &p2, const Point &p3, const Point &p4);
+bool unlimitedLineVSLineIntersection(const Point &p1, const Vector &d0, const Point &p3, const Vector &d1, Point &res);
+bool lineVSLineIntersection(const Point &p1, const Vector &d0, const Point &p3, const Vector &d1, Point &res);
+bool lineVSLineIntersectionCheck(const Point &p1, const Vector &d0, const Point &p3, const Vector &d1);
+bool vectorVSEdgesIntersectionCheck(const Point &center, const Vector &vector, std::vector<Edge> &edges);
+std::vector<Point> vectorVSEdgesIntersection(const Point &center, const Vector &vector, std::vector<Edge> &edges);
