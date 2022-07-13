@@ -364,7 +364,7 @@ bool isOutOfBoarders(const Vector &pointVector, const std::array<Vector, 3> &vie
     return (views[0].cross(pointVector) * pointVector.cross(views[2]) < 0);
 }
 
-void Polygons::updateVisibility(Player &player, const std::vector<std::shared_ptr<Player>> &enemies,
+void Polygons::updateVisibility(Player &player, const std::vector<std::shared_ptr<Entity>> &entities,
                                 std::list<std::shared_ptr<sf::Shape>> &viewShape
 #ifdef T5_DEBUG
                                 , sf::RenderWindow &window
@@ -674,9 +674,9 @@ void Polygons::updateVisibility(Player &player, const std::vector<std::shared_pt
     }
 
     //set visible enemies
-    for (const auto &enemy: enemies) {
+    for (const auto &entity : entities) {
         bool visible = false;
-        Vector enemyVector(center, enemy->getPosition());
+        Vector enemyVector(center, entity->getPosition());
 
         if (enemyVector.sqr() < radius * radius && views[1] * enemyVector > 0 && !isOutOfBoarders(enemyVector, views)) {
             if(!vectorVSEdgesIntersectionCheck(center, enemyVector, blockingEdges)){
@@ -684,7 +684,7 @@ void Polygons::updateVisibility(Player &player, const std::vector<std::shared_pt
             }
         }
 
-        enemy->setVisibility(visible);
+        entity->setVisibility(visible);
     }
 
     //set convex

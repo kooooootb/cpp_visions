@@ -20,6 +20,14 @@ public:
     float getY()const { return position.y; }
     const Point &getPosition()const { return position; }
     const std::shared_ptr<sf::Shape> &getShape() const { return shape; }
+
+    void setVisibility(bool visible){
+        if(visible){
+            shape->setFillColor(shapeColor);
+        }else{
+            shape->setFillColor(sf::Color::Transparent);
+        }
+    }
 };
 
 

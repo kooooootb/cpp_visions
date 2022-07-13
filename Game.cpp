@@ -1,13 +1,14 @@
 #include <iostream>
 
 #include "Game.h"
+#include "Weapon.h"
 
 Game::Game() :
         fpsCounter("", font, FONTSIZE) ,
         polygons(loadLevelForTree(levelFname)) ,
-        tree(2, polygons, {10 /* max leaf */}) ,
+        polygonTree(2, polygons, {10 /* max leaf */}) ,
         tracerTime(sf::seconds(TRACERSHOWTIME)) ,
-        player(Player::loadCharacter(playerFname)) ,
+        player(std::make_shared<Player>(Player::loadEntity(playerFname))) ,
         tracer(sf::LineStrip, 2) ,
         event()
 {
@@ -16,6 +17,9 @@ Game::Game() :
 
     loadFont();
     loadEnemies();
+    loadWeapons();
+
+    setEntities();
 
     createBackground();
 
@@ -52,7 +56,23 @@ void Game::createBackground(){
 }
 
 void Game::loadEnemies() {
-    enemies.emplace_back(std::make_shared<Player>(Player::loadCharacter(enemy1Fname)));
+    enemies.emplace_back(std::make_shared<Player>(Player::loadEntity(enemy1Fname)));
+}
+
+void Game::loadWeapons() {
+//    weapons.emplace_back(std::make_shared<Weapon>(Weapon::loadEntity(weapon1Fname)));
+}
+
+void Game::setEntities() {
+    entities.push_back(player);
+
+    for(const auto &enemy : enemies){
+        entities.push_back(enemy);
+    }
+
+    for(const auto &weapon : weapons){
+        entities.push_back(weapon);
+    }
 }
 
 void Game::initTracer() {
@@ -71,7 +91,7 @@ void Game::run() {
         //update player
 #ifndef T5_DEBUG
         clock.restart();
-        player.update(polygons, tree, sf::Mouse::getPosition(*window), enemies, viewShape);
+        player->update(polygons, polygonTree, sf::Mouse::getPosition(*window), entities, viewShape);
         fpsCounter.setString(std::to_string(sf::seconds(1) / clock.getElapsedTime()));
 #endif
 
@@ -94,14 +114,12 @@ void Game::handleEvents() {
                     std::shared_ptr<Player> temp = nullptr;
                     Point shootAt = sf::Mouse::getPosition(*window);
 
-                    if(player.shoot(enemies, shootAt, temp)){
-                        if(temp->takeDamage(player.getDamage())){
-                            playersShapes.erase(std::find(playersShapes.begin(), playersShapes.end(), temp->getShape()));
-                            enemies.erase(std::find(enemies.begin(), enemies.end(), temp));
-                        }
+                    if(player->shoot(enemies, shootAt, temp)) {
+                        playersShapes.erase(std::find(playersShapes.begin(), playersShapes.end(), temp->getShape()));
+                        enemies.erase(std::find(enemies.begin(), enemies.end(), temp));
                     }
 
-                    tracer[0].position = { player.getPosition().x, player.getPosition().y };
+                    tracer[0].position = { player->getPosition().x, player->getPosition().y };
                     tracer[1].position = { shootAt.x, shootAt.y };
                     tracerClock.restart();
                 }
@@ -113,7 +131,7 @@ void Game::handleEvents() {
             case sf::Event::MouseMoved:
                 if(moveByMouse){
                     sf::Vector2i newMousePos = sf::Mouse::getPosition(*window);
-                    player.move(newMousePos - mousePos);
+                    player->move(newMousePos - mousePos);
                     mousePos = newMousePos;
                 }
                 break;
@@ -135,10 +153,10 @@ void Game::handleEvents() {
 }
 
 void Game::acceleratePlayer() {
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) player.accelerate(0, -1);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) player.accelerate(-1, 0);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) player.accelerate(0, 1);
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) player.accelerate(1, 0);
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) player->accelerate(0, -1);
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) player->accelerate(-1, 0);
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) player->accelerate(0, 1);
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) player->accelerate(1, 0);
 }
 
 void Game::refreshWindow() {
@@ -151,7 +169,7 @@ void Game::refreshWindow() {
     window->draw(fpsCounter);
 
 #ifdef T5_DEBUG
-    player.update(polygons, tree, sf::Mouse::getPosition(window), enemies, enemiesShapes, viewShape, window);
+    player->update(polygons, playerTree, sf::Mouse::getPosition(window), enemies, enemiesShapes, viewShape, window);
 #endif
 
     drawAll(polygonsShapes);//draw forms' shapes
@@ -181,7 +199,7 @@ void Game::showTracer() {
 }
 
 void Game::setEntitiesShapes() {
-    playersShapes.push_back(player.getShape());
+    playersShapes.push_back(player->getShape());
 
     for(const auto &enemy : enemies){
         playersShapes.push_back(enemy->getShape());

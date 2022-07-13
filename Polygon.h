@@ -77,7 +77,7 @@ public:
     std::vector<Edge> collectEdges();
 	PolygonPoint &operator[](unsigned int index);
 	
-	void updateVisibility(Player &player, const std::vector<std::shared_ptr<Player>> &enemies,
+	void updateVisibility(Player &player, const std::vector<std::shared_ptr<Entity>> &entities,
                           std::list<std::shared_ptr<sf::Shape>> &viewShape
 #ifdef T5_DEBUG
                           , sf::RenderWindow &window

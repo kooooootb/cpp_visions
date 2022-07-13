@@ -3,11 +3,15 @@
 
 #include "Player.h"
 #include "Polygon.h"
+#include "Weapon.h"
 
 Player::Player(std::vector<float> args) :
 Entity(Point((float) screen_width / 2, (float) screen_height / 2)) ,
-friction(args[0]) , step(args[1]) , viewDistance(args[2]) , shapeRadius(args[3]) , viewAngle(degToRad(args[4]))
+friction(args[0]) , step(args[1]) , viewDistance(args[2]) , shapeRadius(args[3]) , viewAngle(degToRad(args[4])) ,
+maxHealth(args[5])
 {
+    health = maxHealth;
+
     auto playerShape = std::make_shared<sf::CircleShape>(shapeRadius);
     playerShape->setFillColor(defPlayerColor);
     playerShape->setPosition(position.x, position.y);
@@ -18,8 +22,11 @@ friction(args[0]) , step(args[1]) , viewDistance(args[2]) , shapeRadius(args[3])
 
 Player::Player() :
 Entity(Point((float) screen_width / 2, (float) screen_height / 2)) ,
-friction(FRICTION) , step(STEP) , viewDistance(VIEWDISTANCE) , shapeRadius(SHAPERADIUS) , viewAngle(degToRad(VIEWANGLEDEG))
+friction(FRICTION) , step(STEP) , viewDistance(VIEWDISTANCE) , shapeRadius(SHAPERADIUS) , viewAngle(degToRad(VIEWANGLEDEG)) ,
+maxHealth(MAXHEALTH)
 {
+    health = maxHealth;
+
     auto playerShape = std::make_shared<sf::CircleShape>(shapeRadius);
     playerShape->setFillColor(defPlayerColor);
     playerShape->setPosition(position.x, position.y);
@@ -28,7 +35,7 @@ friction(FRICTION) , step(STEP) , viewDistance(VIEWDISTANCE) , shapeRadius(SHAPE
     shape = playerShape;
 }
 
-void Player::update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &sfMousePos, const std::vector<std::shared_ptr<Player>> &enemies,
+void Player::update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &sfMousePos, const std::vector<std::shared_ptr<Entity>> &entities,
                     std::list<std::shared_ptr<sf::Shape>> &viewShape
 #ifdef T5_DEBUG
                , sf::RenderWindow &window
@@ -98,7 +105,7 @@ void Player::update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &
         polygons[pair.first].polygon.makeVisible();
     }
 
-    polygons.updateVisibility(*this, enemies, viewShape
+    polygons.updateVisibility(*this, entities, viewShape
 #ifdef T5_DEBUG
                               , window
 #endif
@@ -119,7 +126,7 @@ void Player::updateSpeed() {
     }
 }
 
-std::vector<float> Player::loadCharacter(const std::string &fname) {
+std::vector<float> Player::loadEntity(const std::string &fname) {
     std::ifstream fd(fname);
     if(!fd.is_open()){
         throw std::exception();
@@ -128,7 +135,7 @@ std::vector<float> Player::loadCharacter(const std::string &fname) {
     std::vector<float> res;
     float temp;
 
-    for(int i = 0;i < argLength;++i){
+    for(int i = 0; i < argPlayerLength; ++i){
         fd.read(reinterpret_cast<char *>(&temp), sizeof(temp));
         res.push_back(temp);
     }
@@ -138,7 +145,11 @@ std::vector<float> Player::loadCharacter(const std::string &fname) {
     return res;
 }
 
-bool Player::shoot(const std::vector<std::shared_ptr<Player>> &enemies, Point &where, std::shared_ptr<Player> &target){
+bool Player::shoot(const std::vector<std::shared_ptr<Player>> &enemies, Point &where, std::shared_ptr<Player> &target){//true if target died
+    if(activeWeapon == nullptr){
+        return false;
+    }
+
     std::vector<Point> targetPoints;
     target = nullptr;
 
@@ -180,7 +191,7 @@ bool Player::shoot(const std::vector<std::shared_ptr<Player>> &enemies, Point &w
 
             return false;
         }else {
-            return true;
+            return activeWeapon->shoot(target);
         }
     }
 }

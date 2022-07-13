@@ -8,15 +8,15 @@ void rewrite(std::string &fname) {
     std::ofstream fd(fname, std::ios::trunc | std::ios::binary);
 
     int i = 0;
-    T arg[argLength];
+    T arg[argPlayerLength];
 
-    for (const auto &mes: argNames) {
+    for (const auto &mes: argPlayerNames) {
         std::cout << mes << ":";
         std::cin >> arg[i++];
     }
 
     fd.seekp(SEEK_SET);
-    fd.write(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argLength);
+    fd.write(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argPlayerLength);
 }
 
 template<typename T>
@@ -24,14 +24,14 @@ void edit(std::string &fname) {
     std::ifstream ifd(fname, std::ios::binary);
 
     int i;
-    T arg[argLength];
+    T arg[argPlayerLength];
 
     ifd.seekg(SEEK_SET);
-    ifd.read(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argLength);
+    ifd.read(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argPlayerLength);
 
     std::cout << "Choose argument to change:";
     i = 0;
-    for (const auto &mes: argNames) {
+    for (const auto &mes: argPlayerNames) {
         std::cout << std::to_string(i++) << " - " << mes << ' ';
     }
 
@@ -44,8 +44,8 @@ void edit(std::string &fname) {
     std::ofstream ofd(fname, std::ios::binary);
 
     ofd.seekp(SEEK_SET);
-    for (i = 0; i < argLength; ++i) {
-        ofd.write(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argLength);
+    for (i = 0; i < argPlayerLength; ++i) {
+        ofd.write(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argPlayerLength);
     }
 
     ofd.close();
@@ -56,16 +56,16 @@ void print(std::string &fname) {
     std::ifstream fd(fname, std::ios::binary);
 
     int i;
-    T arg[argLength];
+    T arg[argPlayerLength];
 
     fd.seekg(SEEK_SET);
-    if (fd.read(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argLength).eof()) {
+    if (fd.read(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argPlayerLength).eof()) {
         std::cout << "File empty" << std::endl;
         return;
     }
 
     i = 0;
-    for (const auto &mes: argNames) {
+    for (const auto &mes: argPlayerNames) {
         std::cout << mes << ": " << arg[i++] << std::endl;
     }
 

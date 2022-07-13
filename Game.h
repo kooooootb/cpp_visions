@@ -20,11 +20,17 @@ private:
 
     //level variables
     Polygons polygons;
-    my_kd_tree_t tree;
+    my_kd_tree_t polygonTree;
 
     //players
-    Player player;
+    std::shared_ptr<Player> player;
     std::vector<std::shared_ptr<Player>> enemies;
+
+    //weapons
+    std::vector<std::shared_ptr<Weapon>> weapons;
+
+    //entities
+    std::vector<std::shared_ptr<Entity>> entities;
 
     //tracer
     sf::VertexArray tracer;
@@ -35,12 +41,13 @@ private:
     sf::Vector2i mousePos;
     sf::Clock clock, tracerClock;
     sf::Event event;
-    bool debugView = DEBUGVIEW;
 
+    void setEntities();
     void initWindow();
     void initTracer();
     void loadFont();
     void loadEnemies();
+    void loadWeapons();
 
     void handleEvents();
     void acceleratePlayer();
