@@ -4,6 +4,7 @@
 #include <memory>
 #include <list>
 #include <limits>
+#include <cmath>
 
 #include "headers.h"
 
@@ -28,6 +29,8 @@ public:
 
     Point operator+(const Vector &vector) const;
     Point operator-(const Vector &vector) const;
+    Point &operator+=(const Vector &vector);
+    Point &operator+=(const sf::Vector2i &vector);
 
     bool operator!=(const Point &point) const{
         return x != point.x || y != point.y;
@@ -59,6 +62,10 @@ public:
 
     float cross(const Point &point) const{
         return (x * point.y - y * point.x);
+    }
+
+    Vector operator/(float k) const{
+        return { x / k, y / k };
     }
 
     friend Vector operator*(const Vector &v, float k){
@@ -94,10 +101,13 @@ constexpr float degToRad(float degrees){ return (float) (degrees * M_PI / 180); 
 constexpr float radToDeg(float radians){ return (float) (radians * 180 / M_PI); }
 
 inline float getAngleToZero(const sf::Vector2f &a){
-	if (a.y > 0)
-		return (float) acos((a.x) / sqrt(pow(a.x, 2) + pow(a.y, 2)));
-	else
-		return (float) (2 * M_PI - acos((a.x) / sqrt(pow(a.x, 2) + pow(a.y, 2))));
+    if(a.x == 0 && a.y == 0){
+        return 0.0;
+    }else if(a.x > 0){
+        return atan(a.y / a.x);
+    }else{
+        return atan(a.y / a.x) + M_PI;
+    }
 }
 
 bool isOutOfBoarders(const Vector &pointVector, const std::array<Vector, 3> &views);
@@ -110,5 +120,15 @@ void loadLevel(std::vector<std::shared_ptr<sf::Shape>> &shapes, const std::strin
 Polygons loadLevelForTree(const std::string &fname);
 
 Point findNearestPoint(const Point &center, const std::vector<Point> &points);
+
+std::vector<Point> arcSegmentVSLineIntersection(const Point &p1, const Point &p2, const Point &center, float radius, const std::array<Vector, 3> &views);
+std::vector<Point> circleVSLineIntersection(const Point &p1, const Point &p2, const Point &center, float radius);
+bool circleVSLineIntersectionCheck(const Point &p1, const Point &p2, const Point &center, float radius);
+std::vector<Point> twoLinesVSLineIntersection(const Point &p1, const Point &p2, const Point &center, const std::array<Vector, 3> &views);
+bool unlimitedLineVSLineIntersection(const Point &p1, const Vector &d0, const Point &p3, const Vector &d1, Point &res);
+bool lineVSLineIntersection(const Point &p1, const Vector &d0, const Point &p3, const Vector &d1, Point &res);
+bool lineVSLineIntersectionCheck(const Point &p1, const Vector &d0, const Point &p3, const Vector &d1);
+bool vectorVSEdgesIntersectionCheck(const Point &center, const Vector &vector, const std::vector<Edge> &edges);
+std::vector<Point> vectorVSEdgesIntersection(const Point &center, const Vector &vector, const std::vector<Edge> &edges);
 
 #endif //T5_COMMON_H

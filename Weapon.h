@@ -8,17 +8,48 @@
 class Weapon : public Entity{
 private:
     unsigned int ammo;
-    float damage;
-
+    const float damage, speed;
 
 public:
     Weapon();
     Weapon(std::vector<float> args);
 
+    float getDamage() const{ return damage; }
+    float getSpeed() const{ return speed; }
+    unsigned int getAmmo() const{ return ammo; }
+
     static std::vector<float> loadEntity(const std::string &fname);
 
-    bool shoot(std::shared_ptr<Player> &target);
+    bool shoot(std::shared_ptr<Player> &target, Point &where, const std::vector<Edge> &blockingEdges);//true if killed, not empty
+    void shoot();
+    bool spendBullet();
+    bool empty() const{ return ammo < 1; }
 };
 
+class Weapons{//class for tree functions
+private:
+    const std::vector<std::shared_ptr<Weapon>> &weapons;
+public:
+    Weapons(const std::vector<std::shared_ptr<Weapon>> &w) : weapons(w) {}
+
+    //------------------------------------------------------------------
+    //Functions for nanoflann's kdtree:
+    inline size_t kdtree_get_point_count() const { return weapons.size(); }
+
+    inline float kdtree_get_pt(const size_t idx, const size_t dim) const
+    {
+        if (dim == 0)
+            return weapons[idx]->getPosition().x;
+        else
+            return weapons[idx]->getPosition().y;
+    }
+
+    template <class BBOX>
+    bool kdtree_get_bbox(BBOX& /* bb */) const
+    {
+        return false;
+    }
+    //------------------------------------------------------------------
+};
 
 #endif //T5_WEAPON_H

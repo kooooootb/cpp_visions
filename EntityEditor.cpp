@@ -3,20 +3,23 @@
 
 #include "headers.h"
 
+const std::vector<std::string> *argNames;
+const unsigned long long *argLength;
+
 template<typename T>
 void rewrite(std::string &fname) {
     std::ofstream fd(fname, std::ios::trunc | std::ios::binary);
 
     int i = 0;
-    T arg[argPlayerLength];
+    T arg[*argLength];
 
-    for (const auto &mes: argPlayerNames) {
+    for (const auto &mes: *argNames) {
         std::cout << mes << ":";
         std::cin >> arg[i++];
     }
 
     fd.seekp(SEEK_SET);
-    fd.write(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argPlayerLength);
+    fd.write(reinterpret_cast<char *>(arg), sizeof(arg[0]) * *argLength);
 }
 
 template<typename T>
@@ -24,14 +27,14 @@ void edit(std::string &fname) {
     std::ifstream ifd(fname, std::ios::binary);
 
     int i;
-    T arg[argPlayerLength];
+    T arg[*argLength];
 
     ifd.seekg(SEEK_SET);
-    ifd.read(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argPlayerLength);
+    ifd.read(reinterpret_cast<char *>(arg), sizeof(arg[0]) * *argLength);
 
     std::cout << "Choose argument to change:";
     i = 0;
-    for (const auto &mes: argPlayerNames) {
+    for (const auto &mes: *argNames) {
         std::cout << std::to_string(i++) << " - " << mes << ' ';
     }
 
@@ -44,8 +47,8 @@ void edit(std::string &fname) {
     std::ofstream ofd(fname, std::ios::binary);
 
     ofd.seekp(SEEK_SET);
-    for (i = 0; i < argPlayerLength; ++i) {
-        ofd.write(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argPlayerLength);
+    for (i = 0; i < *argLength; ++i) {
+        ofd.write(reinterpret_cast<char *>(arg), sizeof(arg[0]) * *argLength);
     }
 
     ofd.close();
@@ -56,16 +59,16 @@ void print(std::string &fname) {
     std::ifstream fd(fname, std::ios::binary);
 
     int i;
-    T arg[argPlayerLength];
+    T arg[*argLength];
 
     fd.seekg(SEEK_SET);
-    if (fd.read(reinterpret_cast<char *>(arg), sizeof(arg[0]) * argPlayerLength).eof()) {
+    if (fd.read(reinterpret_cast<char *>(arg), sizeof(arg[0]) * *argLength).eof()) {
         std::cout << "File empty" << std::endl;
         return;
     }
 
     i = 0;
-    for (const auto &mes: argPlayerNames) {
+    for (const auto &mes: *argNames) {
         std::cout << mes << ": " << arg[i++] << std::endl;
     }
 
@@ -73,6 +76,25 @@ void print(std::string &fname) {
 }
 
 int main(){
+    std::cout << "Write:" << std::endl << "\t" << codePlayer << " to work with players file" << std::endl;
+    std::cout << "\t" << codeWeapon << " to work with weapons file" << std::endl;
+    char c;
+    std::cin >> c;
+
+    switch(c){
+        case codePlayer:
+            argNames = &argPlayerNames;
+            argLength = &argPlayerLength;
+            break;
+        case codeWeapon:
+            argNames = &argWeaponNames;
+            argLength = &argWeaponLength;
+            break;
+        default:
+            std::cout << "Not supported" << std::endl;
+            return 0;
+    }
+
     std::string fname;
     int choice = 1;
 

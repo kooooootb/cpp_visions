@@ -74,7 +74,7 @@ public:
 	//------------------------------------------------------------------
 	
 	void hideAll();
-    std::vector<Edge> collectEdges();
+    std::vector<Edge> collectEdges() const;
 	PolygonPoint &operator[](unsigned int index);
 	
 	void updateVisibility(Player &player, const std::vector<std::shared_ptr<Entity>> &entities,
@@ -84,12 +84,3 @@ public:
 #endif
                           );
 };
-
-std::vector<Point> arcSegmentVSLineIntersection(const Point &p1, const Point &p2, const Point &center, float radius, const std::array<Vector, 3> &views);
-std::vector<Point> circleVSLineIntersection(const Point &p1, const Point &p2, const Point &center, float radius);
-std::vector<Point> twoLinesVSLineIntersection(const Point &p1, const Point &p2, const Point &center, const std::array<Vector, 3> &views);
-bool unlimitedLineVSLineIntersection(const Point &p1, const Vector &d0, const Point &p3, const Vector &d1, Point &res);
-bool lineVSLineIntersection(const Point &p1, const Vector &d0, const Point &p3, const Vector &d1, Point &res);
-bool lineVSLineIntersectionCheck(const Point &p1, const Vector &d0, const Point &p3, const Vector &d1);
-bool vectorVSEdgesIntersectionCheck(const Point &center, const Vector &vector, std::vector<Edge> &edges);
-std::vector<Point> vectorVSEdgesIntersection(const Point &center, const Vector &vector, std::vector<Edge> &edges);

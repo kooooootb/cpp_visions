@@ -18,10 +18,20 @@ private:
     const float shapeRadius;
     const float viewAngle;
     const float maxHealth;
+    const float maxSpeed;
 
     std::vector<Edge> blockingEdges;
 
     void updateSpeed();
+    void collisionCheck(Polygons &polygons, KDPolygonsTree &tree);//check if current dx dy push player into wall
+    void updatePosition();
+    void updateView(Polygons &polygons, const KDPolygonsTree &tree, const std::vector<std::shared_ptr<Entity>> &entities, std::list<std::shared_ptr<sf::Shape>> &viewShape
+#ifdef T5_DEBUG
+            , sf::RenderWindow &window
+#endif
+    );
+
+    void pickWeapon(KDWeaponsTree &tree, std::vector<std::shared_ptr<Weapon>> &weapons);
 public:
     Player();
     Player(std::vector<float> args);
@@ -31,50 +41,28 @@ public:
     static std::vector<float> loadEntity(const std::string &fname);
 
     constexpr float getViewDistance()const { return viewDistance; }
-    float getAngle()const { return angle; }
     constexpr float getViewAngle()const { return viewAngle; }
     std::vector<Edge> &getBlockingEdges() { return blockingEdges; }
     const std::vector<Edge> &getBlockingEdges() const{ return blockingEdges; }
     float getRadius() const{ return shapeRadius; }
+    unsigned int getAmmo() const;
 
-    void accelerate(float dX, float dY){
-        this->dx += dX * step;
-        this->dy += dY * step;
-    }
+    bool isArmed() const{ return activeWeapon != nullptr; }
 
-    void move(sf::Vector2i vector){
-        this->position.x += (float) vector.x;
-        this->position.y += (float) vector.y;
-    }
+    void accelerate(float dX, float dY);
+    void move(sf::Vector2i vector);
 
-    inline static void updateCoord(float &coord, float &d, float limit){
-        coord += d;
+    inline void updateCoord(float &coord, float &d, float limit);
 
-        if(coord >= limit){
-            coord = limit;
-            d = 0;
-        }
-        else if(coord <= 0){
-            coord = 0;
-            d = 0;
-        }
-    }
-
-    void update(Polygons &polygons, my_kd_tree_t &tree, const sf::Vector2i &mousePos, const std::vector<std::shared_ptr<Entity>> &entities,
+    void update(Polygons &polygons, KDPolygonsTree &tree, const sf::Vector2i &mousePos, const std::vector<std::shared_ptr<Entity>> &entities,
                 std::list<std::shared_ptr<sf::Shape>> &viewShape
 #ifdef T5_DEBUG
                 , sf::RenderWindow &window
 #endif
                 );
 
-    bool takeDamage(float dealtDamage){
-        if(dealtDamage >= health){
-            return true;
-        }else{
-            health -= dealtDamage;
-            return false;
-        }
-    }
+    bool takeDamage(float dealtDamage);
 
-    bool shoot(const std::vector<std::shared_ptr<Player>> &enemies, Point &where, std::shared_ptr<Player> &target);//true if target died
+    bool shoot(std::vector<std::shared_ptr<Player>> &players, std::shared_ptr<Projectile> &projectile, const KDPolygonsTree &tree, Polygons &polygons);//true if able to shoot
+    void changeWeapon(KDWeaponsTree &tree, std::vector<std::shared_ptr<Weapon>> &weapons);
 };
