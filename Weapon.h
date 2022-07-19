@@ -11,20 +11,24 @@ private:
     const float damage, speed;
 
 public:
-    Weapon();
-    Weapon(std::vector<float> args);
+    Weapon(std::pair<std::string, std::vector<float>> args, const Point &point);
 
     float getDamage() const{ return damage; }
     float getSpeed() const{ return speed; }
     unsigned int getAmmo() const{ return ammo; }
+    const std::string &getName() const{ return name; }
 
-    static std::vector<float> loadEntity(const std::string &fname);
+    std::string name;
+
+    static std::pair<std::string, std::vector<float>> loadEntity(const std::string &fname);
 
     bool shoot(std::shared_ptr<Player> &target, Point &where, const std::vector<Edge> &blockingEdges);//true if killed, not empty
     void shoot();
     bool spendBullet();
     bool empty() const{ return ammo < 1; }
 };
+
+
 
 class Weapons{//class for tree functions
 private:

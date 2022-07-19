@@ -8,6 +8,8 @@
 #include <fstream>
 
 #include "Polygon.h"
+#include "Common.h"
+
 
 int initViewSector(std::shared_ptr<sf::ConvexShape> &viewShape, const Point &center, float viewDistance, float currentAngle, float viewAngle){
     if(viewAngle > currentAngle){
@@ -58,11 +60,19 @@ Point &Point::operator+=(const Vector &vector) {
     return *this;
 }
 
-Point &Point::operator+=(const sf::Vector2i &vector) {
+Point &Point::operator+=(const sf::Vector2f &vector) {
     x += (float) vector.x;
     y += (float) vector.y;
 
     return *this;
+}
+
+Vector operator-(const Point &point, const sf::Vector2f &vector) {
+    return { point.x - vector.x, point.y - vector.y };
+}
+
+Vector operator-(const Point &point, const sf::Vector2i &vector) {
+    return { point.x - vector.x, point.y - vector.y };
 }
 
 Point calcClosestPoint(const Edge &edge, const Point &point){
@@ -102,11 +112,96 @@ bool findClosestEdge(const std::vector<Edge> &edges, Edge &edge, const Point &po
     return true;
 }
 
-void saveLevel(const std::string &fname, const std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &polygons){
+std::vector<Point> loadWeaponSpawnpoints(std::ifstream &fd){
+    unsigned long long length;
+    fd.read(reinterpret_cast<char *>(&length), sizeof(length));
+    length /= 2 * sizeof(float);
+
+    std::vector<Point> res;
+
+    for(int i = 0;i < length;++i){
+        Point point;
+
+        fd.read(reinterpret_cast<char *>(&point.x), sizeof(point.x));
+        fd.read(reinterpret_cast<char *>(&point.y), sizeof(point.y));
+
+        res.push_back(point);
+    }
+
+    return res;
+}
+
+std::pair<int, int> loadBoarders(std::ifstream &fd) {
+    int width, height;
+
+    fd.read(reinterpret_cast<char *>(&width), sizeof(width));
+    fd.read(reinterpret_cast<char *>(&height), sizeof(height));
+
+    return { width, height };
+}
+
+std::vector<Point> loadWeaponSpawnpoints(const std::string &fname){
+    std::ifstream fd(fname, std::ios::in | std::ios::binary);
+
+    std::vector<Point> res;
+
+    if(fd.is_open()){
+        unsigned long long length;
+        fd.read(reinterpret_cast<char *>(&length), sizeof(length));
+        length /= 2 * sizeof(float);
+
+        for(int i = 0;i < length;++i){
+            Point point;
+
+            fd.read(reinterpret_cast<char *>(&point.x), sizeof(point.x));
+            fd.read(reinterpret_cast<char *>(&point.y), sizeof(point.y));
+
+            res.push_back(point);
+        }
+
+        fd.close();
+    }
+
+
+    return res;
+}
+
+std::pair<int, int> loadBoarders(const std::string &fname){
+    std::ifstream fd(fname, std::ios::in | std::ios::binary);
+
+    int width, height;
+
+    if(fd.is_open()){
+        skipWeaponSpawnpoints(fd);
+
+        fd.read(reinterpret_cast<char *>(&width), sizeof(width));
+        fd.read(reinterpret_cast<char *>(&height), sizeof(height));
+    }
+
+
+    return { width, height };
+}
+
+void saveLevel(const std::string &fname, const std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &polygons,
+               const std::vector<Point> &weaponSps, const std::pair<int, int> &boarders) {
     std::ofstream fd(fname, std::ios::out | std::ios::binary | std::ios::trunc);
 
     if(fd.is_open()){
-        auto size = polygons.size();
+        unsigned long long weaponsOffset = weaponSps.size() * 2 * sizeof(float);
+        fd.write(reinterpret_cast<char *>(&weaponsOffset), sizeof(weaponsOffset));
+
+        for(const auto &point : weaponSps){
+            float x = point.x, y = point.y;
+
+            fd.write(reinterpret_cast<char *>(&x), sizeof(x));
+            fd.write(reinterpret_cast<char *>(&y), sizeof(y));
+        }
+
+        int width = boarders.first, height = boarders.second;
+        fd.write(reinterpret_cast<char *>(&width), sizeof(width));
+        fd.write(reinterpret_cast<char *>(&height), sizeof(height));
+
+        unsigned long long size = polygons.size();
         fd.write(reinterpret_cast<char *>(&size), sizeof(size));
 
         for(auto &it : polygons){
@@ -124,10 +219,14 @@ void saveLevel(const std::string &fname, const std::vector<std::shared_ptr<std::
     }
 }
 
-void loadLevel(std::vector<std::shared_ptr<sf::Shape>> &shapes, const std::string &fname, std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &polygons){
+bool loadLevel(std::vector<std::shared_ptr<sf::Shape>> &shapes, const std::string &fname,
+               std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &polygons, std::vector<Point> &weaponSps) {
     std::ifstream fd(fname, std::ios::in | std::ios::binary);
 
     if(fd.is_open()){
+        weaponSps = loadWeaponSpawnpoints(fd);
+        skipBoarders(fd);
+
         unsigned long long polygonsSize;
         fd.read(reinterpret_cast<char *>(&polygonsSize), sizeof(polygonsSize));
 
@@ -148,6 +247,19 @@ void loadLevel(std::vector<std::shared_ptr<sf::Shape>> &shapes, const std::strin
         }
 
         fd.close();
+    }else{
+        return false;
+    }
+
+    if(!weaponSps.empty()){
+        for(const auto &it : weaponSps){
+            std::shared_ptr<sf::CircleShape> circle = std::make_shared<sf::CircleShape>(3);
+            circle->setFillColor(sf::Color::Green);
+            circle->setPosition(it.x, it.y);
+            circle->setOrigin(3, 3);
+
+            shapes.push_back(circle);
+        }
     }
 
     if(!polygons.empty()){
@@ -164,6 +276,19 @@ void loadLevel(std::vector<std::shared_ptr<sf::Shape>> &shapes, const std::strin
             shapes.push_back(std::make_shared<sf::ConvexShape>(convex));
         }
     }
+
+    return true;
+}
+
+void skipWeaponSpawnpoints(std::ifstream &fd){
+    unsigned long long offset;
+    fd.read(reinterpret_cast<char *>(&offset), sizeof(offset));
+
+    fd.seekg(offset, std::ifstream::cur);
+}
+
+void skipBoarders(std::ifstream &fd){
+    fd.seekg(2 * sizeof(int), std::ifstream::cur);
 }
 
 Polygons loadLevelForTree(const std::string &fname){
@@ -172,6 +297,9 @@ Polygons loadLevelForTree(const std::string &fname){
     Polygons pols;
 
     if(fd.is_open()){
+        skipWeaponSpawnpoints(fd);
+        skipBoarders(fd);
+
         unsigned long long polygonsAmount;
         fd.read(reinterpret_cast<char *>(&polygonsAmount), sizeof(polygonsAmount));
 
@@ -443,4 +571,36 @@ std::vector<Point> vectorVSEdgesIntersection(const Point &center, const Vector &
     }
 
     return res;
+}
+
+void writeFname(std::string &fname, std::ofstream &fd){
+    unsigned long long size = fname.size();
+    fd.write(reinterpret_cast<char *>(&size), sizeof(size));
+    fd.write(reinterpret_cast<char *>(&fname[0]), sizeof(fname[0]) * size);
+}
+
+void writeFname(std::ofstream &fd){
+    std::string fname;
+    std::cout << "Input entity's sprite file name:";
+    std::cin >> fname;
+
+    writeFname(fname, fd);
+}
+
+std::string readFname(std::ifstream &fd){
+    std::string res;
+
+    unsigned long long size;
+
+    fd.read(reinterpret_cast<char *>(&size), sizeof(size));
+
+    res.resize(size);
+
+    fd.read(reinterpret_cast<char *>(&res[0]), sizeof(char) * size);
+
+    return res;
+}
+
+sf::Vector2f getMousePosition(const sf::RenderWindow &window){
+    return window.mapPixelToCoords(sf::Mouse::getPosition(window));
 }

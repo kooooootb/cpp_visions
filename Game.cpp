@@ -13,11 +13,13 @@ Game::Game() :
         player(std::make_shared<Player>(Player::loadEntity(playerFname))) ,
         event() ,
         weaponsDataSet(std::make_shared<Weapons>(weapons)) ,
-        weaponsTree(2, *weaponsDataSet, {10 /* max leaf */})
+        weaponsTree(2, *weaponsDataSet, {10 /* max leaf */}) ,
+        view(sf::FloatRect(0, 0, viewWidth, viewHeight))
 {
     initWindow();
 
     loadFont();
+    setBoarders();
     loadEnemies();
     loadWeapons();
 
@@ -29,12 +31,13 @@ Game::Game() :
 
     polygonsShapes = polygons->collectShapes();
     players.push_back(player);
+    window->setView(view);
 }
 
 void Game::initWindow() {
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
-    window = std::make_shared<sf::RenderWindow>(sf::VideoMode(screen_width, screen_height), std::to_string(fps), sf::Style::Default, settings);
+    window = std::make_shared<sf::RenderWindow>(sf::VideoMode(viewWidth, viewHeight), std::to_string(fps), sf::Style::Default, settings);
     window->setFramerateLimit(fps);
 }
 
@@ -49,10 +52,9 @@ void Game::loadFont() {
 }
 
 void Game::createBackground(){
-    std::shared_ptr<sf::RectangleShape> backgroundShape = std::make_shared<sf::RectangleShape>(sf::Vector2f(screen_width, screen_height));
+    std::shared_ptr<sf::RectangleShape> backgroundShape = std::make_shared<sf::RectangleShape>(sf::Vector2f(levelWidth + 200, levelHeight + 200));
 
-    backgroundShape->setPosition(0, 0);
-//	backgroundShape->setFillColor(sf::Color(228, 228, 228));
+    backgroundShape->setPosition(-100, -100);
     backgroundShape->setFillColor(sf::Color(10, 10, 10));
 
     defShapes.push_back(backgroundShape);
@@ -63,10 +65,28 @@ void Game::loadEnemies() {
 }
 
 void Game::loadWeapons() {
-    weapons.emplace_back(std::make_shared<Weapon>(Weapon::loadEntity(weapon1Fname)));
+    std::vector<std::pair<std::string, std::vector<float>>> argsArray;
+
+    for(int i = 1;true;++i){//load all weapon files
+        std::pair<std::string, std::vector<float>> args = Weapon::loadEntity("weapon" + std::to_string(i) + ".bin");
+        if(args.second.empty()){
+            break;
+        }else{
+            argsArray.push_back(args);
+        }
+    }
+
+    std::vector<Point> weaponSps = loadWeaponSpawnpoints(levelFname);
+    for(const auto &point : weaponSps){
+        int choice = rand() % argsArray.size();
+
+        weapons.emplace_back(std::make_shared<Weapon>(argsArray[choice], point));
+    }
 }
 
 void Game::setEntities() {
+    entities.clear();
+
     for(const auto &character : players){
         entities.push_back(character);
     }
@@ -88,14 +108,19 @@ void Game::run() {
         //move player
         acceleratePlayer();
 
+        //move projectiles
         updateProjectiles();
 
         //update player
 #ifndef T5_DEBUG
-        player->update(*polygons, polygonTree, sf::Mouse::getPosition(*window), entities, viewShape);
-        fpsCounter.setString(std::to_string(sf::seconds(1) / clock.getElapsedTime()));
+        player->update(*polygons, polygonTree, getMousePosition(*window), entities, viewShape);
+/*        fpsCounter.setString(std::to_string(sf::seconds(1) / clock.getElapsedTime()));
         clock.restart();
+*/
 #endif
+
+        //refresh view position
+        updateViewPosition();
 
         //refresh ammo amount
         updateAmmo();
@@ -154,6 +179,12 @@ void Game::handleEvents() {
                         break;
                 }
                 break;
+            case sf::Event::Resized:
+                view.setSize(event.size.width, event.size.height);
+                viewWidth = event.size.width;
+                viewHeight = event.size.height;
+                window->setView(view);
+                break;
             default:
                 //default
                 break;
@@ -175,7 +206,7 @@ void Game::refreshWindow() {
     drawAll(defShapes);//draw default shapes
 
 #ifdef T5_DEBUG
-    player->update(polygons, playerTree, sf::Mouse::getPosition(window), enemies, enemiesShapes, viewShape, window);
+    player->update(*polygons, polygonTree, getMousePosition(*window), entities, viewShape, *window);
 #endif
 
     drawAll(polygonsShapes);//draw forms' shapes
@@ -210,15 +241,15 @@ void Game::drawAll(const std::vector<std::shared_ptr<Entity>> &ents){
 
 void Game::drawAllEntities(){
     for(const auto &it : players){
-        window->draw(*(it->getShape()));
+        it->draw(*window);
     }
 
     for(const auto &it : weapons){
-        window->draw(*(it->getShape()));
+        it->draw(*window);
     }
 
     for(const auto &it : projectiles){
-        window->draw(*(it->getShape()));
+        it->draw(*window);
     }
 }
 
@@ -232,7 +263,7 @@ void Game::shootAtPoint() {
 }
 
 void Game::startMouseControl() {
-    mousePos = sf::Mouse::getPosition(*window);
+    mousePos = getMousePosition(*window);
     moveByMouse = true;
 }
 
@@ -241,7 +272,7 @@ void Game::stopMouseControl() {
 }
 
 void Game::mouseControl() {
-    sf::Vector2i newMousePos = sf::Mouse::getPosition(*window);
+    sf::Vector2f newMousePos = getMousePosition(*window);
     player->move(newMousePos - mousePos);
     mousePos = newMousePos;
 }
@@ -251,18 +282,18 @@ void Game::changeWeapon() {
 }
 
 void Game::initWeaponsTree() {
-    weaponsTree.addPoints(0, weapons.size() - 1);
+    if(!weapons.empty()){
+        weaponsTree.addPoints(0, weapons.size() - 1);
+    }
 }
 
 void Game::updateProjectiles() {
     std::vector<int> indexes;
-    bool reset = false;
     int i = 0;
 
     for(auto &projectile : projectiles){
         if(projectile->update()){
             indexes.push_back(i);
-            reset = true;
         }
 
         ++i;
@@ -278,6 +309,9 @@ void Game::updateProjectiles() {
 
 void Game::updateAmmo() {
     if(player->isArmed()){
+        sf::Vector2f screenVector(viewWidth / 2 - 20, viewHeight / 2 - 20);
+        ammoCounter.setPosition(view.getCenter() + screenVector);
+
         ammoCounter.setString(std::to_string(player->getAmmo()));
     }else{
         ammoCounter.setString("");
@@ -285,5 +319,28 @@ void Game::updateAmmo() {
 }
 
 void Game::initAmmoCounter() {
-    ammoCounter.setPosition(screen_width - FONTSIZE * 5, screen_height - FONTSIZE);
+    ammoCounter.setPosition(viewWidth - FONTSIZE * 5, viewHeight - FONTSIZE);
+}
+
+void Game::setBoarders() {
+    std::pair<int, int> bords = loadBoarders(levelFname);
+
+    levelWidth = bords.first;
+    levelHeight = bords.second;
+}
+
+void Game::updateViewPosition() {
+    const Point &pp = player->getPosition();
+
+//    (LS - P.X)(LS - SS)/LS = LS - S.X
+    auto lw = (float) levelWidth;
+    auto lh = (float) levelHeight;
+
+    Vector dp = Point(viewWidth / 2, viewHeight / 2) - sf::Mouse::getPosition(*window);
+
+    float sx = (lw - (lw - 2*pp.x)*(1 - (viewWidth - 40)/lw))/2 - dp.x;
+    float sy = (lh - (lh - 2*pp.y)*(1 - (viewHeight - 40)/lh))/2 - dp.y;
+
+    view.setCenter(sx, sy);
+    window->setView(view);
 }

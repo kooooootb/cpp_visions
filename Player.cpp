@@ -6,37 +6,19 @@
 #include "Weapon.h"
 #include "Projectile.h"
 
-Player::Player(std::vector<float> args) :
-        Entity(args[0], args[1]) ,
-        friction(args[2]) , step(args[3]) , viewDistance(args[4]) , shapeRadius(args[5]) , viewAngle(degToRad(args[6])) ,
-        maxHealth(args[7]) , maxSpeed(args[8])
+Player::Player(std::pair<std::string, std::vector<float>> args) :
+        Entity(args.first + "_unarmed.png", args.second[0], args.second[1]) ,
+        friction(args.second[2]) , step(args.second[3]) , viewDistance(args.second[4]) , shapeRadius(args.second[5]) , viewAngle(degToRad(args.second[6])) ,
+        maxHealth(args.second[7]) , maxSpeed(args.second[8])
 {
     health = maxHealth;
 
-    auto playerShape = std::make_shared<sf::CircleShape>(shapeRadius);
-    playerShape->setFillColor(defPlayerColor);
-    playerShape->setPosition(position.x, position.y);
-    playerShape->setOrigin(shapeRadius, shapeRadius);
-
-    shape = playerShape;
+    for(const auto &name : availableWeapons){
+        armedTextures[name].loadFromFile((texturesDirectory + args.first) += "_" + name + ".png");
+    }
 }
 
-Player::Player() :
-    Entity(Point((float) screen_width / 2, (float) screen_height / 2)) ,
-    friction(FRICTION) , step(STEP) , viewDistance(VIEWDISTANCE) , shapeRadius(SHAPERADIUS) , viewAngle(degToRad(VIEWANGLEDEG)) ,
-    maxHealth(MAXHEALTH) , maxSpeed(SPEEDLIMIT)
-{
-    health = maxHealth;
-
-    auto playerShape = std::make_shared<sf::CircleShape>(shapeRadius);
-    playerShape->setFillColor(defPlayerColor);
-    playerShape->setPosition(position.x, position.y);
-    playerShape->setOrigin(shapeRadius, shapeRadius);
-
-    shape = playerShape;
-}
-
-void Player::update(Polygons &polygons, KDPolygonsTree &tree, const sf::Vector2i &mousePos, const std::vector<std::shared_ptr<Entity>> &entities,
+void Player::update(Polygons &polygons, KDPolygonsTree &tree, const sf::Vector2f &mousePos, const std::vector<std::shared_ptr<Entity>> &entities,
                     std::list<std::shared_ptr<sf::Shape>> &viewShape
 #ifdef T5_DEBUG
                , sf::RenderWindow &window
@@ -55,7 +37,11 @@ void Player::update(Polygons &polygons, KDPolygonsTree &tree, const sf::Vector2i
     updatePosition();
 
     //set forms' shapes:
-    updateView(polygons, tree, entities, viewShape);
+    updateView(polygons, tree, entities, viewShape
+#ifdef T5_DEBUG
+    , window
+#endif
+    );
 
     //make player visible
     setVisibility(true);
@@ -75,7 +61,7 @@ void Player::updateSpeed() {
     }
 }
 
-std::vector<float> Player::loadEntity(const std::string &fname) {
+std::pair<std::string, std::vector<float>> Player::loadEntity(const std::string &fname) {
     std::ifstream fd(fname);
     if(!fd.is_open()){
         throw std::exception();
@@ -89,9 +75,11 @@ std::vector<float> Player::loadEntity(const std::string &fname) {
         res.push_back(temp);
     }
 
+    std::string name = readFname(fd);
+
     fd.close();
 
-    return res;
+    return { name, res };
 }
 
 bool Player::shoot(std::vector<std::shared_ptr<Player>> &players, std::shared_ptr<Projectile> &projectile, const KDPolygonsTree &tree, Polygons &polygons){//true if able to shoot
@@ -116,7 +104,7 @@ void Player::pickWeapon(KDWeaponsTree &tree, std::vector<std::shared_ptr<Weapon>
         if(found){
             if(out_dist_sqr < PICKUPRADIUSSQR){
                 activeWeapon = weapons[ret_index];
-                weapons.erase(std::find(weapons.begin(), weapons.end(), activeWeapon));
+                activeWeapon->setVisibility(false);
 
                 tree.removePoint(ret_index);
             }
@@ -133,6 +121,12 @@ void Player::changeWeapon(KDWeaponsTree &tree, std::vector<std::shared_ptr<Weapo
     if(temp != nullptr){
         weapons.push_back(temp);
         tree.addPoints(weapons.size() - 1, weapons.size() - 1);
+    }
+
+    if(activeWeapon != nullptr){
+        setTexture(armedTextures[activeWeapon->getName()]);
+    } else if(temp != activeWeapon){
+        setTexture(defTexture);
     }
 }
 
@@ -172,11 +166,11 @@ void Player::collisionCheck(Polygons &polygons, KDPolygonsTree &tree) {
 
 void Player::updatePosition() {
     //set player coords:
-    updateCoord(position.x, dx, screen_width);
-    updateCoord(position.y, dy, screen_height);
+    updateCoord(position.x, dx);
+    updateCoord(position.y, dy);
 
     //update shape's position
-    shape->setPosition(position.x, position.y);
+    sprite->setPosition(position.x, position.y);
 
     //update active weapon position
     if(activeWeapon != nullptr){
@@ -215,20 +209,11 @@ bool Player::takeDamage(float dealtDamage) {
     }
 }
 
-void Player::updateCoord(float &coord, float &d, float limit) {
+void Player::updateCoord(float &coord, float &d) {
     coord += d;
-
-    if(coord >= limit){
-        coord = limit;
-        d = 0;
-    }
-    else if(coord <= 0){
-        coord = 0;
-        d = 0;
-    }
 }
 
-void Player::move(sf::Vector2i vector) {
+void Player::move(sf::Vector2f vector) {
     position += vector;
 }
 

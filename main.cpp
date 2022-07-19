@@ -1,12 +1,7 @@
 #include "Game.h"
 
 int main(){
-    //collect players shapes
-//    defShapes.push_back(player.getPlayerShape());
-	
-	//variables:
-
-    //set tracer:
+    srand(time(nullptr));
 
 	Game game;
     game.run();

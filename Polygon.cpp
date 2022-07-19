@@ -226,7 +226,11 @@ void Polygons::updateVisibility(Player &player, const std::vector<std::shared_pt
                             endPoints.push_back(previousPoint);
                             std::vector<Point> intersectPoint = twoLinesVSLineIntersection(previousPoint, currentPoint,
                                                                                            center, views);
-                            edgePoints.push_back(intersectPoint.front());
+                            if(!intersectPoint.empty()){
+                                edgePoints.push_back(intersectPoint.front());
+                            }else{
+                                edgePoints.push_back(center);
+                            }
                             blockingEdges.emplace_back(previousPoint, currentPoint);
                             break;
                         }
@@ -492,7 +496,7 @@ void Polygons::updateVisibility(Player &player, const std::vector<std::shared_pt
         int pointCount = 3;
         std::shared_ptr<sf::ConvexShape> convex = std::make_shared<sf::ConvexShape>(pointCount);
         dist = Vector(center, *it).sqr();
-        diff = std::abs(dist- radius * radius);
+        diff = std::abs(dist - radius * radius);
         bool usedArc = false, itLiesOnArc = diff < epsilon;
 
         if(prevLiesOnArc && itLiesOnArc){

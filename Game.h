@@ -33,9 +33,14 @@ private:
     //entities
     std::vector<std::shared_ptr<Entity>> entities;
 
+    //screen settings
+    int viewWidth = screen_width, viewHeight = screen_height;
+    int levelWidth, levelHeight;
+    sf::View view;
+
     //other variables
     bool moveByMouse = false;
-    sf::Vector2i mousePos;
+    sf::Vector2f mousePos;
     sf::Clock clock, tracerClock;
     sf::Event event;
 
@@ -44,10 +49,12 @@ private:
     void initWeaponsTree();
     void initAmmoCounter();
     void loadFont();
+    void setBoarders();
     void loadEnemies();
     void loadWeapons();
     void updateProjectiles();
     void updateAmmo();
+    void updateViewPosition();
 
     void handleEvents();
     void acceleratePlayer();

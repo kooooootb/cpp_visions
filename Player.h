@@ -22,6 +22,8 @@ private:
 
     std::vector<Edge> blockingEdges;
 
+    std::map<std::string, sf::Texture> armedTextures;
+
     void updateSpeed();
     void collisionCheck(Polygons &polygons, KDPolygonsTree &tree);//check if current dx dy push player into wall
     void updatePosition();
@@ -33,12 +35,11 @@ private:
 
     void pickWeapon(KDWeaponsTree &tree, std::vector<std::shared_ptr<Weapon>> &weapons);
 public:
-    Player();
-    Player(std::vector<float> args);
+    Player(std::pair<std::string, std::vector<float>> args);
 
     ~Player() = default;
 
-    static std::vector<float> loadEntity(const std::string &fname);
+    static std::pair<std::string, std::vector<float>> loadEntity(const std::string &fname);
 
     constexpr float getViewDistance()const { return viewDistance; }
     constexpr float getViewAngle()const { return viewAngle; }
@@ -50,11 +51,11 @@ public:
     bool isArmed() const{ return activeWeapon != nullptr; }
 
     void accelerate(float dX, float dY);
-    void move(sf::Vector2i vector);
+    void move(sf::Vector2f vector);
 
-    inline void updateCoord(float &coord, float &d, float limit);
+    inline void updateCoord(float &coord, float &d);
 
-    void update(Polygons &polygons, KDPolygonsTree &tree, const sf::Vector2i &mousePos, const std::vector<std::shared_ptr<Entity>> &entities,
+    void update(Polygons &polygons, KDPolygonsTree &tree, const sf::Vector2f &mousePos, const std::vector<std::shared_ptr<Entity>> &entities,
                 std::list<std::shared_ptr<sf::Shape>> &viewShape
 #ifdef T5_DEBUG
                 , sf::RenderWindow &window

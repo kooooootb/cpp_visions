@@ -4,37 +4,25 @@
 #include "Player.h"
 #include "Polygon.h"
 
-Weapon::Weapon(std::vector<float> args) :
-        Entity(args[0], args[1]) ,
-        ammo((unsigned int) args[2]) , damage(args[3]) , speed(args[4])
+Weapon::Weapon(std::pair<std::string, std::vector<float>> args, const Point &point) :
+        Entity(args.first, point) ,
+        ammo((unsigned int) args.second[0]) , damage(args.second[1]) , speed(args.second[2])
 {
-    auto tempShape = std::make_shared<sf::CircleShape>(SHAPERADIUS);
-    tempShape->setFillColor(defWeaponColor);
-    tempShape->setPosition(position.x, position.y);
-    tempShape->setOrigin(SHAPERADIUS, SHAPERADIUS);
+    name = args.first;
+    name.erase(name.length() - 4);//delete ".png"
 
-    shape = tempShape;
+    setAngle(degToRad(rand() % 360));
 }
 
-Weapon::Weapon() :
-        Entity(Point((float) screen_width / 2, (float) screen_height / 2)) ,
-        ammo(AMMO) , damage(DAMAGE) , speed(BULLETSPEED)
-{
-    auto tempShape = std::make_shared<sf::CircleShape>(SHAPERADIUS);
-    tempShape->setFillColor(defWeaponColor);
-    tempShape->setPosition(position.x, position.y);
-    tempShape->setOrigin(SHAPERADIUS, SHAPERADIUS);
+std::pair<std::string, std::vector<float>> Weapon::loadEntity(const std::string &fname) {
+    std::vector<float> res;
+    std::string name;
 
-    shape = tempShape;
-}
-
-std::vector<float> Weapon::loadEntity(const std::string &fname) {
     std::ifstream fd(fname);
     if(!fd.is_open()){
-        throw std::exception();
+        return { name, res };
     }
 
-    std::vector<float> res;
     float temp;
 
     for(int i = 0; i < argWeaponLength; ++i){
@@ -42,9 +30,11 @@ std::vector<float> Weapon::loadEntity(const std::string &fname) {
         res.push_back(temp);
     }
 
+    name = readFname(fd);
+
     fd.close();
 
-    return res;
+    return { name, res };
 }
 
 bool Weapon::shoot(std::shared_ptr<Player> &target, Point &where, const std::vector<Edge> &blockingEdges) {//true if killed, not empty

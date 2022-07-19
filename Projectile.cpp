@@ -4,17 +4,10 @@
 #include "Player.h"
 
 Projectile::Projectile(const Weapon &weapon, std::vector<std::shared_ptr<Player>> &Players, const KDPolygonsTree &tree, Polygons &Polygons) :
-    Entity(weapon.getPosition(), weapon.getAngle()) , speed(weapon.getSpeed()) , damage(weapon.getDamage()) ,
+    Entity(projectileSprite, weapon.getPosition(), weapon.getAngle()) , speed(weapon.getSpeed()) , damage(weapon.getDamage()) ,
     direction(speed * std::cos(angle), speed * std::sin(angle)) , players(Players) , polygonsTree(tree), polygons(Polygons)
 {
     position += ((direction / speed) * 2 * SHAPERADIUS);
-
-    auto tempShape = std::make_shared<sf::CircleShape>(SHAPERADIUS);
-    tempShape->setFillColor(defWeaponColor);
-    tempShape->setPosition(position.x, position.y);
-    tempShape->setOrigin(SHAPERADIUS, SHAPERADIUS);
-
-    shape = tempShape;
 }
 
 bool Projectile::update() {//true if destroyed
@@ -71,5 +64,5 @@ bool Projectile::update() {//true if destroyed
 void Projectile::updatePosition() {
     position += direction;
 
-    shape->setPosition(position.x, position.y);
+    sprite->setPosition(position.x, position.y);
 }

@@ -6,7 +6,7 @@ set(EXECUTABLE_OUTPUT_PATH ../files)
 
 add_executable(t5 main.cpp Common.cpp Polygon.cpp Polygon.h Polygon.cpp Player.cpp Player.h headers.h Game.cpp Game.h Entity.cpp Entity.h Weapon.cpp Weapon.h Projectile.cpp Projectile.h)
 
-add_executable(level level.cpp Common.cpp Polygon.cpp Polygon.h)
+add_executable(levelEditor level.cpp Common.cpp Polygon.cpp Polygon.h)
 
 add_executable(entityEditor EntityEditor.cpp)
 
@@ -17,9 +17,10 @@ add_subdirectory(sfml)
 include_directories(sfml/include)
 
 target_link_libraries(t5 sfml-graphics sfml-audio sfml-network sfml-window sfml-system)
-target_link_libraries(level sfml-graphics sfml-audio sfml-network sfml-window sfml-system)
+target_link_libraries(levelEditor sfml-graphics sfml-audio sfml-network sfml-window sfml-system)
 target_link_libraries(entityEditor sfml-graphics sfml-audio sfml-network sfml-window sfml-system)
 
+#nanoflann libs
 add_subdirectory(nanoflann-master)
 include_directories(nanoflann-master/include)
 target_link_libraries(t5 nanoflann::nanoflann)
