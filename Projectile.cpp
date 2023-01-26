@@ -3,9 +3,11 @@
 #include "Weapon.h"
 #include "Player.h"
 
-Projectile::Projectile(const Weapon &weapon, std::vector<std::shared_ptr<Player>> &Players, const KDPolygonsTree &tree, Polygons &Polygons) :
+#include <cmath>
+
+Projectile::Projectile(const Weapon &weapon, std::vector<std::shared_ptr<BasePlayer>> &Players, const std::vector<std::shared_ptr<Polygon>> &Polygons) :
     Entity(projectileSprite, weapon.getPosition(), weapon.getAngle()) , speed(weapon.getSpeed()) , damage(weapon.getDamage()) ,
-    direction(speed * std::cos(angle), speed * std::sin(angle)) , players(Players) , polygonsTree(tree), polygons(Polygons)
+    direction(speed * std::cos(angle), speed * std::sin(angle)) , players(Players) , polygons(Polygons)
 {
     position += ((direction / speed) * 2 * SHAPERADIUS);
 }
@@ -13,7 +15,9 @@ Projectile::Projectile(const Weapon &weapon, std::vector<std::shared_ptr<Player>
 bool Projectile::update() {//true if destroyed
     //check if it hits somebody
     bool hit;
-    for(const auto &player : players){
+
+    for(auto plIt = players.cbegin(), plEnd = players.cend();plIt != plEnd;++plIt){
+        const std::shared_ptr<BasePlayer> &player = *plIt;
         Vector plVector(position, player->getPosition());
         if(plVector.sqr() < pow(speed, 2)){
             hit = circleVSLineIntersectionCheck(position, position + direction, player->getPosition(), player->getRadius());
@@ -26,7 +30,7 @@ bool Projectile::update() {//true if destroyed
 
             if(hit){
                 if(player->takeDamage(damage)){
-                    players.erase(std::find(players.begin(), players.end(), player));
+                    players.erase(plIt);
                 }
 
                 return true;
@@ -34,35 +38,39 @@ bool Projectile::update() {//true if destroyed
         }
     }
 
-    //check if able to move forward
-    float query[2] = {position.x, position.y};
-    std::vector<std::pair<uint32_t, float>> ret_matches;
-    polygonsTree.radiusSearch(query, 3 * pow(speed, 2), ret_matches, {});
+    // check if able to move forward
+    double checkDistance = speed * 2;
 
-    polygons.hideAll();
-    for(auto &pair : ret_matches){
-        polygons[pair.first].polygon.makeVisible();
-    }
-    std::vector<Edge> edges = polygons.collectEdges();
+    Point maxPoint = position + Vector(checkDistance, checkDistance);
+    Point minPoint = position - Vector(checkDistance, checkDistance);
 
-    bool edgeFound = false;
-    for(auto &edge : edges){
-        if(lineVSLineIntersectionCheck(position, direction, edge.first, Vector(edge.first, edge.second))){
-            edgeFound = true;
+    for(const auto &pol : polygons){
+        // find polygons that can intersect
+        if(pol->minPoint().x < maxPoint.x && pol->minPoint().y < maxPoint.y && pol->maxPoint().x > minPoint.x && pol->maxPoint().y > minPoint.y){
+            auto end = pol->getPoints().end();
+            auto first = end - 1;
+            auto second = pol->getPoints().begin();
 
-            break;
+            while(second != end){
+                // find if they really intersect
+                if(lineVSLineIntersectionCheck(position, direction, *first, Vector(*first, *second))) {
+                    return true;
+                }
+
+                first = second;
+                ++second;
+            }
         }
     }
 
-    if(!edgeFound){
-        updatePosition();
-    }
+    // update if not destroyed
+    updatePosition();
 
-    return edgeFound;
+    return false;
 }
 
 void Projectile::updatePosition() {
     position += direction;
 
-    sprite->setPosition(position.x, position.y);
+    sprite->setPosition((float) position.x, (float) position.y);
 }

@@ -5,40 +5,60 @@
 #include "Projectile.h"
 #include "Polygon.h"
 
-Game::Game() :
+Game::Game(std::shared_ptr<sf::RenderWindow> &window_) :
+        window(window_) ,
+        viewWidth(window_->getSize().x) ,
+        viewHeight(window_->getSize().y) ,
         fpsCounter("", font, FONTSIZE) ,
         ammoCounter("", font, FONTSIZE) ,
-        polygons(std::make_shared<Polygons>(loadLevelForTree(levelFname))) ,
-        polygonTree(2, *polygons, {10 /* max leaf */}) ,
-        player(std::make_shared<Player>(Player::loadEntity(playerFname))) ,
+        polygons(loadLevel(levelFname)) ,
+        player(std::make_shared<Player>(Player::loadPlayer(playerFname))) ,
         event() ,
-        weaponsDataSet(std::make_shared<Weapons>(weapons)) ,
-        weaponsTree(2, *weaponsDataSet, {10 /* max leaf */}) ,
-        view(sf::FloatRect(0, 0, viewWidth, viewHeight))
+        view(sf::FloatRect(0, 0, (float) viewWidth, (float) viewHeight)) ,
+        viewShape(sf::TriangleFan) ,
+        backGroundVertices(sf::Quads, 4)
 {
-    initWindow();
-
     loadFont();
     setBoarders();
+
     loadEnemies();
     loadWeapons();
 
     setEntities();
-    initWeaponsTree();
-    initAmmoCounter();
 
     createBackground();
 
-    polygonsShapes = polygons->collectShapes();
     players.push_back(player);
     window->setView(view);
 }
 
-void Game::initWindow() {
-    sf::ContextSettings settings;
-    settings.antialiasingLevel = 8;
-    window = std::make_shared<sf::RenderWindow>(sf::VideoMode(viewWidth, viewHeight), std::to_string(fps), sf::Style::Default, settings);
-    window->setFramerateLimit(fps);
+void Game::run() {
+    while (window->isOpen()) {
+        //event handler
+        handleEvents();
+
+        //move player
+        acceleratePlayer();
+
+        //move projectiles
+        updateProjectiles();
+
+        //update player
+        player->update(polygons, getMousePosition(*window), entities);
+/*
+        fpsCounter.setString(std::to_string(sf::seconds(1) / clock.getElapsedTime()));
+        clock.restart();
+*/
+
+        //refresh view position
+        updateViewPosition();
+
+        //refresh ammo amount
+        updateAmmo();
+
+        //draw shapes
+        refreshWindow();
+    }
 }
 
 void Game::loadFont() {
@@ -52,16 +72,40 @@ void Game::loadFont() {
 }
 
 void Game::createBackground(){
-    std::shared_ptr<sf::RectangleShape> backgroundShape = std::make_shared<sf::RectangleShape>(sf::Vector2f(levelWidth + 200, levelHeight + 200));
+    backGroundVertices[0].position = sf::Vector2f(-100, -100);
+    backGroundVertices[1].position = sf::Vector2f((float) levelWidth + 100, -100);
+    backGroundVertices[2].position = sf::Vector2f((float) levelWidth + 100, (float) levelHeight + 100);
+    backGroundVertices[3].position = sf::Vector2f(-100, (float) levelHeight + 100);
 
-    backgroundShape->setPosition(-100, -100);
-    backgroundShape->setFillColor(sf::Color(10, 10, 10));
+    unsigned int bgTextWidth = levelWidth + 200, bgTextHeight = levelHeight + 200;
 
-    defShapes.push_back(backgroundShape);
+    backGroundTexture.create(bgTextWidth, bgTextHeight);
+
+//    unsigned int pixelsSize = bgTextHeight * bgTextWidth;
+    unsigned int pixelsSize = 1;
+    auto *pixels = new sf::Uint8[pixelsSize * 4 /*for RGBA*/], *curPixel = pixels;
+    for(unsigned int i = 0;i < pixelsSize;++i){
+        curPixel[0] = 228; // R
+        curPixel[1] = 228; // G
+        curPixel[2] = 228; // B
+        curPixel[3] = 255; // A
+
+        curPixel += 4;
+    }
+
+//    backGroundTexture.update(pixels);
+    backGroundTexture.update(pixels, 1, 1, 0, 0);
+
+    delete [] pixels;
+
+    backGroundVertices[0].texCoords = sf::Vector2f(0, 0);
+    backGroundVertices[1].texCoords = sf::Vector2f(0, 0);
+    backGroundVertices[2].texCoords = sf::Vector2f(0, 0);
+    backGroundVertices[3].texCoords = sf::Vector2f(0, 0);
 }
 
 void Game::loadEnemies() {
-    players.emplace_back(std::make_shared<Player>(Player::loadEntity(enemy1Fname)));
+    players.emplace_back(std::make_shared<Enemy>(Enemy::loadEnemy(enemy1Fname)));
 }
 
 void Game::loadWeapons() {
@@ -97,36 +141,6 @@ void Game::setEntities() {
 
     for(const auto &projectile : projectiles){
         entities.push_back(projectile);
-    }
-}
-
-void Game::run() {
-    while (window->isOpen()) {
-        //event handler
-        handleEvents();
-
-        //move player
-        acceleratePlayer();
-
-        //move projectiles
-        updateProjectiles();
-
-        //update player
-#ifndef T5_DEBUG
-        player->update(*polygons, polygonTree, getMousePosition(*window), entities, viewShape);
-/*        fpsCounter.setString(std::to_string(sf::seconds(1) / clock.getElapsedTime()));
-        clock.restart();
-*/
-#endif
-
-        //refresh view position
-        updateViewPosition();
-
-        //refresh ammo amount
-        updateAmmo();
-
-        //draw shapes
-        refreshWindow();
     }
 }
 
@@ -203,19 +217,22 @@ void Game::refreshWindow() {
     window->clear();
 
     //draw section
-    drawAll(defShapes);//draw default shapes
+    window->draw(backGroundVertices, &backGroundTexture); // draw background
 
-#ifdef T5_DEBUG
-    player->update(*polygons, polygonTree, getMousePosition(*window), entities, viewShape, *window);
-#endif
+    //draw polygons
+    for(const auto &polygon : polygons){
+        polygon->drawShape(*window);
+    }
 
-    drawAll(polygonsShapes);//draw forms' shapes
-    drawAll(viewShape);//draw view field shape
+    //draw player's area of view
+    window->draw(player->getViewShape());
 
     drawAllEntities();//draw entities
 
     //show current fps
     window->draw(fpsCounter);
+
+    //draw current ammo
     window->draw(ammoCounter);
 
     window->display();
@@ -256,10 +273,9 @@ void Game::drawAllEntities(){
 void Game::shootAtPoint() {
     std::shared_ptr<Projectile> projectile = nullptr;
 
-    if(player->shoot(players, projectile, polygonTree, *polygons)) {
+    if(player->shoot(players, projectile, polygons)) {
         projectiles.push_back(projectile);
     }
-
 }
 
 void Game::startMouseControl() {
@@ -278,13 +294,7 @@ void Game::mouseControl() {
 }
 
 void Game::changeWeapon() {
-    player->changeWeapon(weaponsTree, weapons);
-}
-
-void Game::initWeaponsTree() {
-    if(!weapons.empty()){
-        weaponsTree.addPoints(0, weapons.size() - 1);
-    }
+    player->changeWeapon(weapons);
 }
 
 void Game::updateProjectiles() {
@@ -309,7 +319,7 @@ void Game::updateProjectiles() {
 
 void Game::updateAmmo() {
     if(player->isArmed()){
-        sf::Vector2f screenVector(viewWidth / 2 - 20, viewHeight / 2 - 20);
+        sf::Vector2f screenVector((float) viewWidth / 2 - 20, (float) viewHeight / 2 - 20);
         ammoCounter.setPosition(view.getCenter() + screenVector);
 
         ammoCounter.setString(std::to_string(player->getAmmo()));
@@ -318,29 +328,29 @@ void Game::updateAmmo() {
     }
 }
 
-void Game::initAmmoCounter() {
-    ammoCounter.setPosition(viewWidth - FONTSIZE * 5, viewHeight - FONTSIZE);
-}
-
 void Game::setBoarders() {
-    std::pair<int, int> bords = loadBoarders(levelFname);
+    std::pair<int, int> boards = loadBoarders(levelFname);
 
-    levelWidth = bords.first;
-    levelHeight = bords.second;
+    levelWidth = boards.first;
+    levelHeight = boards.second;
 }
 
 void Game::updateViewPosition() {
     const Point &pp = player->getPosition();
 
 //    (LS - P.X)(LS - SS)/LS = LS - S.X
-    auto lw = (float) levelWidth;
-    auto lh = (float) levelHeight;
+    double lw = levelWidth;
+    double lh = levelHeight;
 
-    Vector dp = Point(viewWidth / 2, viewHeight / 2) - sf::Mouse::getPosition(*window);
+    Vector dp = Point(viewWidth / 2., viewHeight / 2.) - sf::Mouse::getPosition(*window);
 
-    float sx = (lw - (lw - 2*pp.x)*(1 - (viewWidth - 40)/lw))/2 - dp.x;
-    float sy = (lh - (lh - 2*pp.y)*(1 - (viewHeight - 40)/lh))/2 - dp.y;
+    double sy = (lh - (lh - 2*pp.y)*(1 - (viewHeight - 40)/lh))/2 - dp.y;
+    double sx = (lw - (lw - 2*pp.x)*(1 - (viewWidth - 40)/lw))/2 - dp.x;
 
-    view.setCenter(sx, sy);
+    view.setCenter((float) sx, (float) sy);
     window->setView(view);
+}
+
+Game::~Game(){
+
 }

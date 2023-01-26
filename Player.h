@@ -1,51 +1,49 @@
+#include <SFML/Graphics.hpp>
+
 #include <memory>
+#include <map>
+#include <vector>
 #include <list>
 
 #include "Entity.h"
 #include "Common.h"
 
-class Player : public Entity{
+class BasePlayer : public Entity{
 private:
-    float dx = 0, dy = 0;
+    double dx = 0, dy = 0;
 
-    float health;
+    unsigned int health;
 
     std::shared_ptr<Weapon> activeWeapon;
 
-    const float friction;
-    const float step;
-    const float viewDistance;
-    const float shapeRadius;
-    const float viewAngle;
-    const float maxHealth;
-    const float maxSpeed;
+    std::map<std::string, sf::Texture> armedTextures;
+
+protected:
+    const double friction;
+    const double step;
+    const double viewDistance;
+    const double shapeRadius;
+    const double viewAngle;
+    const int maxHealth;
+    const double maxSpeed;
 
     std::vector<Edge> blockingEdges;
 
-    std::map<std::string, sf::Texture> armedTextures;
-
     void updateSpeed();
-    void collisionCheck(Polygons &polygons, KDPolygonsTree &tree);//check if current dx dy push player into wall
-    void updatePosition();
-    void updateView(Polygons &polygons, const KDPolygonsTree &tree, const std::vector<std::shared_ptr<Entity>> &entities, std::list<std::shared_ptr<sf::Shape>> &viewShape
-#ifdef T5_DEBUG
-            , sf::RenderWindow &window
-#endif
-    );
+    void collisionCheck(const std::vector<std::shared_ptr<Polygon>> &polygons);//check if current dx dy push player into wall
+    void updatePosition(const std::vector<std::shared_ptr<Polygon>> &polygons);
 
-    void pickWeapon(KDWeaponsTree &tree, std::vector<std::shared_ptr<Weapon>> &weapons);
+    void pickWeapon(std::vector<std::shared_ptr<Weapon>> &weapons);
+
 public:
-    Player(std::pair<std::string, std::vector<float>> args);
+    BasePlayer(const std::string &name, double x_, double y_, double friction_, double step_,
+               double viewDistance_, double shapeRadius_, double viewAngle_, int maxHealth_, double maxSpeed_);
 
-    ~Player() = default;
+    ~BasePlayer() = default;
 
-    static std::pair<std::string, std::vector<float>> loadEntity(const std::string &fname);
-
-    constexpr float getViewDistance()const { return viewDistance; }
-    constexpr float getViewAngle()const { return viewAngle; }
-    std::vector<Edge> &getBlockingEdges() { return blockingEdges; }
-    const std::vector<Edge> &getBlockingEdges() const{ return blockingEdges; }
-    float getRadius() const{ return shapeRadius; }
+    double getViewDistance()const { return viewDistance; }
+    double getViewAngle()const { return viewAngle; }
+    double getRadius() const{ return shapeRadius; }
     unsigned int getAmmo() const;
 
     bool isArmed() const{ return activeWeapon != nullptr; }
@@ -53,17 +51,49 @@ public:
     void accelerate(float dX, float dY);
     void move(sf::Vector2f vector);
 
-    inline void updateCoord(float &coord, float &d);
+    inline void updateCoord(double &coord, double &d);
 
-    void update(Polygons &polygons, KDPolygonsTree &tree, const sf::Vector2f &mousePos, const std::vector<std::shared_ptr<Entity>> &entities,
-                std::list<std::shared_ptr<sf::Shape>> &viewShape
-#ifdef T5_DEBUG
-                , sf::RenderWindow &window
-#endif
-                );
+    bool takeDamage(unsigned int dealtDamage);
+    bool shoot(std::vector<std::shared_ptr<BasePlayer>> &players, std::shared_ptr<Projectile> &projectile, const std::vector<std::shared_ptr<Polygon>> &polygons);//true if able to shoot
+    void changeWeapon(std::vector<std::shared_ptr<Weapon>> &weapons);
 
-    bool takeDamage(float dealtDamage);
+    virtual void update(const std::vector<std::shared_ptr<Polygon>> &polygons, const sf::Vector2f &mousePos,
+                const std::vector<std::shared_ptr<Entity>> &entities) = 0;
+}; // class BasePlayer
 
-    bool shoot(std::vector<std::shared_ptr<Player>> &players, std::shared_ptr<Projectile> &projectile, const KDPolygonsTree &tree, Polygons &polygons);//true if able to shoot
-    void changeWeapon(KDWeaponsTree &tree, std::vector<std::shared_ptr<Weapon>> &weapons);
-};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class Player: public BasePlayer{
+private:
+    sf::VertexArray viewShape;
+
+    void updateView(const std::vector<std::shared_ptr<Polygon>> &polygons, const std::vector<std::shared_ptr<Entity>> &entities);
+    PointType getPointType(const Point &point, const std::array<Vector, 3> &views)const;
+
+public:
+    Player(const std::string &name_, double x_, double y_, double friction_, double step_, double viewDistance_,
+                      double shapeRadius_, double viewAngleDeg_, int maxHealth_, double maxSpeed_);
+
+    static Player loadPlayer(const std::string &fname);
+
+    const sf::VertexArray &getViewShape() const{ return viewShape; }
+    sf::VertexArray &getViewShape() { return viewShape; }
+
+    void update(const std::vector<std::shared_ptr<Polygon>> &polygons, const sf::Vector2f &mousePos,
+                const std::vector<std::shared_ptr<Entity>> &entities) final;
+}; // class Player
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class Enemy: public BasePlayer{
+public:
+    Enemy(const std::string &name_, double x_, double y_, double friction_, double step_, double viewDistance_,
+           double shapeRadius_, double viewAngleDeg_, int maxHealth_, double maxSpeed_);
+
+    static Enemy loadEnemy(const std::string &fname);
+
+    void update(const std::vector<std::shared_ptr<Polygon>> &polygons, const sf::Vector2f &mousePos,
+                const std::vector<std::shared_ptr<Entity>> &entities) final;
+
+
+}; // class Enemy

@@ -4,7 +4,7 @@ project(t5)
 set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_OUTPUT_PATH ../files)
 
-add_executable(t5 main.cpp Common.cpp Polygon.cpp Polygon.h Polygon.cpp Player.cpp Player.h headers.h Game.cpp Game.h Entity.cpp Entity.h Weapon.cpp Weapon.h Projectile.cpp Projectile.h)
+add_executable(t5 Common.cpp main.cpp Polygon.cpp Polygon.cpp Player.cpp Game.cpp Entity.cpp Weapon.cpp Projectile.cpp)
 
 add_executable(levelEditor level.cpp Common.cpp Polygon.cpp Polygon.h)
 
@@ -20,7 +20,7 @@ target_link_libraries(t5 sfml-graphics sfml-audio sfml-network sfml-window sfml-
 target_link_libraries(levelEditor sfml-graphics sfml-audio sfml-network sfml-window sfml-system)
 target_link_libraries(entityEditor sfml-graphics sfml-audio sfml-network sfml-window sfml-system)
 
-#nanoflann libs
-add_subdirectory(nanoflann-master)
-include_directories(nanoflann-master/include)
-target_link_libraries(t5 nanoflann::nanoflann)
+##nanoflann libs
+#add_subdirectory(nanoflann-master)
+#include_directories(nanoflann-master/include)
+#target_link_libraries(t5 nanoflann::nanoflann)

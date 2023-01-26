@@ -1,3 +1,5 @@
+#include <SFML/Graphics.hpp>
+
 #include <memory>
 #include <vector>
 #include <list>
@@ -11,31 +13,30 @@ private:
     sf::Font font;
     sf::Text fpsCounter, ammoCounter;
 
-    //shapes
-    std::vector<std::shared_ptr<sf::Shape>> defShapes;//default shapes (background)
-    std::list<std::shared_ptr<sf::Shape>> viewShape;//view field shape
-    std::vector<std::shared_ptr<sf::Shape>> polygonsShapes;//polygons' shapes
+    //shapes textures vertices
+    sf::VertexArray backGroundVertices;
+    sf::Texture backGroundTexture;
+//    std::vector<std::shared_ptr<sf::Shape>> defShapes;//default shapes (background)
+    sf::VertexArray viewShape;//view field shape
+//    std::vector<std::shared_ptr<sf::Shape>> polygonsShapes;//polygons' shapes
 
     //level variables
-    std::shared_ptr<Polygons> polygons;
-    KDPolygonsTree polygonTree;
+    std::vector<std::shared_ptr<Polygon>> polygons;
 
     //players
     std::shared_ptr<Player> player;
-    std::vector<std::shared_ptr<Player>> players;
+    std::vector<std::shared_ptr<BasePlayer>> players;
 
     //weapons
     std::vector<std::shared_ptr<Weapon>> weapons;
-    std::shared_ptr<Weapons> weaponsDataSet;
-    KDWeaponsTree weaponsTree;
     std::vector<std::shared_ptr<Projectile>> projectiles;
 
     //entities
     std::vector<std::shared_ptr<Entity>> entities;
 
     //screen settings
-    int viewWidth = screen_width, viewHeight = screen_height;
-    int levelWidth, levelHeight;
+    unsigned int viewWidth, viewHeight;
+    unsigned int levelWidth, levelHeight;
     sf::View view;
 
     //other variables
@@ -45,9 +46,6 @@ private:
     sf::Event event;
 
     void setEntities();
-    void initWindow();
-    void initWeaponsTree();
-    void initAmmoCounter();
     void loadFont();
     void setBoarders();
     void loadEnemies();
@@ -71,7 +69,9 @@ private:
     void drawAll(const std::vector<std::shared_ptr<Entity>> &entities);
     void drawAllEntities();
 public:
-    Game();
+    Game(std::shared_ptr<sf::RenderWindow> &windowPtr_);
+
+    ~Game();
 
     void run();
 };
