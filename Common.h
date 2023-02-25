@@ -8,6 +8,9 @@
 
 #include "headers.h"
 
+using BoarderType = std::pair<unsigned int, unsigned int>;
+using PolygonArray = std::vector<std::shared_ptr<Polygon>>;
+
 enum PointType{ //ordering is important
     within = 0,
     behind = 1,
@@ -21,9 +24,13 @@ public:
 
     Point() : x(0) , y(0) {}
     Point(double X, double Y) : x(X) , y(Y) {}
+    Point(int X, int Y) : x((double) X) , y((double) Y) {}
     explicit Point(const sf::Vector2i &vector) : x((double) vector.x) , y((double) vector.y) {}
+    explicit Point(const sf::Vector2f &vector) : x((double) vector.x) , y((double) vector.y) {}
 
     double getDistance(const Point &point) const;
+    double distSqr(const Point &point) const;
+    double sqr() const;
 
     Point operator+(const Vector &vector) const;
     Point operator-(const Vector &vector) const;
@@ -35,6 +42,8 @@ public:
     bool operator!=(const Point &point) const;
     bool operator==(const sf::Vector2i &vector)const;
     bool operator==(const Point &point) const;
+
+    sf::Vector2f toSfVector() const;
 };
 
 class Vector : public Point{
@@ -47,6 +56,7 @@ public:
     double operator*(const Point &point) const;
     bool operator!=(const Vector &vector) const;
     double cross(const Point &point) const;
+    double cross(const Vector &vector) const;
     Vector operator/(double k) const;
     friend Vector operator*(const Vector &v, double k);
     friend Vector operator*(double k, const Vector &v);
@@ -65,7 +75,7 @@ int initViewSector(sf::VertexArray &viewShape, const Point &center, double viewD
 // angle funcs
 constexpr double degToRad(double degrees) { return (degrees * M_PI / 180); }
 constexpr double radToDeg(double radians) { return (radians * 180 / M_PI); }
-double getAngleToZero(const sf::Vector2f &a);
+double getAngleToZero(const Vector &a);
 
 // geometry funcs
 bool isOutOfBoarders(const Vector &pointVector, const std::array<Vector, 3> &views);
@@ -74,16 +84,12 @@ Point calcClosestPoint(const Edge &edge, const Point &point);
 bool findClosestEdge(const std::vector<Edge> &edges, Edge &edge, const Point &point);
 
 // loading saving funcs
-void skipWeaponSpawnpoints(std::ifstream &fd);
-void skipBoarders(std::ifstream &fd);
-void saveLevel(const std::string &fname, const std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &polygons,
-               const std::vector<Point> &weaponSps, const std::pair<int, int> &boarders);
-bool loadLevel(std::vector<std::shared_ptr<sf::Shape>> &shapes, const std::string &fname,
-               std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &polygons, std::vector<Point> &weaponSps);
-std::vector<std::shared_ptr<Polygon>> loadLevel(const std::string &fname);
-std::vector<Point> loadWeaponSpawnpoints(std::ifstream &fd);
-std::vector<Point> loadWeaponSpawnpoints(const std::string &fname);
-std::pair<int, int> loadBoarders(const std::string &fname);
+void skWp(std::ifstream &fd);
+void skBd(std::ifstream &fd);
+void svLv(const std::string &fname, const std::vector<std::shared_ptr<Polygon>> &polygons, const std::vector<Point> &weaponSps, const BoarderType &boarders);
+std::vector<std::shared_ptr<Polygon>> ldPl(const std::string &fname);
+std::vector<Point> ldWp(const std::string &fname);
+BoarderType ldBd(const std::string &fname);
 
 Point findNearestPoint(const Point &center, const std::vector<Point> &points);
 
@@ -102,6 +108,41 @@ void writeFname(std::string &fname, std::ofstream &fd);
 void writeFname(std::ofstream &fd);
 std::string readFname(std::ifstream &fd);
 
-sf::Vector2f getMousePosition(const sf::RenderWindow &window);
+sf::Vector2f getMousePosition(sf::RenderWindow &window, const sf::View &view);
+
+void createBackground(sf::VertexArray &bgVertices, sf::Texture &bgTexture, unsigned int width, unsigned int height);
+sf::Texture createPlainTexture(unsigned int width, unsigned int height, const sf::Color &color = sf::Color::Black);
+
+bool almost_equal(double x, double y, int ulp=2);
+bool almost_equal(const Point &p1, const Point &p2);
+bool almost_equal(const Edge &e1, const Edge &e2);
+
+std::string getStringFromWindow(sf::RenderWindow &window, const std::string &message);
+void addBoarders(PolygonArray &polygons, BoarderType &boarders); // add 4 rectangles to polygons
+std::vector<Point> vertexArrayToPoints(sf::VertexArray &v);
+sf::VertexArray createGridVertices(BoarderType::first_type width, BoarderType::second_type height, float precision);
+sf::CircleShape setAimPointShape(float radius = 6);
+void applyFriction(sf::Vector2f &vector, float friction);
+bool checkKeyPressed(std::initializer_list<sf::Keyboard::Key>);
 
 #endif //T5_COMMON_H
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

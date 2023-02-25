@@ -57,7 +57,6 @@ private:
     void handleEvents();
     void acceleratePlayer();
     void refreshWindow();
-    void createBackground();
     void shootAtPoint();
     void startMouseControl();
     void stopMouseControl();

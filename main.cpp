@@ -1,4 +1,6 @@
 #include "Game.h"
+#include "MainMenu.h"
+#include "LevelEditor.h"
 
 std::shared_ptr<sf::RenderWindow> initWindow(unsigned int viewWidth, unsigned int viewHeight) {
     sf::ContextSettings settings;
@@ -12,10 +14,35 @@ std::shared_ptr<sf::RenderWindow> initWindow(unsigned int viewWidth, unsigned in
 int main(){
     srand(time(nullptr));
 
-    std::shared_ptr<sf::RenderWindow> window = initWindow(screen_width, screen_height);
+    std::shared_ptr<sf::RenderWindow> pWindow = initWindow(screen_width, screen_height);
 
-	Game game(window);
-    game.run();
-	
-	return 0;
+    MainMenu mm(pWindow);
+
+    while(pWindow->isOpen()){
+        ChooseStatus decision = mm.run();
+
+        switch(decision){
+            case GAME:{
+                //	Game game(pWindow);
+                //    game.run();
+
+                break;
+            }
+            case EDITOR:{
+                LevelEditor levelEditor(pWindow, levelFname);
+                levelEditor.run();
+
+                break;
+            }
+            case EXIT:{
+                if(pWindow->isOpen()){
+                    pWindow->close();
+                }
+
+                return 0;
+            }
+            default:
+                throw std::runtime_error("met default case in menu switcher");
+        }
+    }
 }

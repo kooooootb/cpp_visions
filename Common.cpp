@@ -1,6 +1,5 @@
 #include <SFML/Graphics.hpp>
 
-#include <list>
 #include <vector>
 #include <memory>
 #include <cmath>
@@ -8,6 +7,8 @@
 #include <fstream>
 
 #include "Polygon.h"
+#include "Common.h"
+
 
 // extern variables:
 const unsigned int screen_width = 800;
@@ -109,8 +110,12 @@ Vector operator-(const Point &point, const sf::Vector2i &vector) {
     return { point.x - vector.x, point.y - vector.y };
 }
 
+double Point::distSqr(const Point &point) const {
+    return std::pow((x - point.x), 2) + std::pow((y - point.y), 2);
+}
+
 double Point::getDistance(const Point &point) const {
-    return (double) std::sqrt(std::pow((x - point.x), 2) + std::pow((y - point.y), 2));
+    return (double) std::sqrt(distSqr(point));
 }
 
 bool Point::operator!=(const Point &point) const {
@@ -123,6 +128,14 @@ bool Point::operator==(const sf::Vector2i &vector) const {
 
 bool Point::operator==(const Point &point) const {
     return x == point.x && y == point.y;
+}
+
+double Point::sqr() const {
+    return x * x + y * y;
+}
+
+sf::Vector2f Point::toSfVector() const {
+    return {(float) x, (float) y};
 }
 
 Point calcClosestPoint(const Edge &edge, const Point &point){
@@ -157,246 +170,6 @@ bool findClosestEdge(const std::vector<Edge> &edges, Edge &edge, const Point &po
 
     edge = *edgePtr;
     return true;
-}
-
-std::vector<Point> loadWeaponSpawnpoints(std::ifstream &fd){
-    size_t length;
-    fd.read(reinterpret_cast<char *>(&length), sizeof(length));
-    length /= 2 * sizeof(double);
-
-    std::vector<Point> res;
-
-    for(int i = 0;i < length;++i){
-        Point point(0, 0);
-
-        fd.read(reinterpret_cast<char *>(&point.x), sizeof(point.x));
-        fd.read(reinterpret_cast<char *>(&point.y), sizeof(point.y));
-
-        res.push_back(point);
-    }
-
-    return res;
-}
-
-std::pair<int, int> loadBoarders(std::ifstream &fd) {
-    int width, height;
-
-    fd.read(reinterpret_cast<char *>(&width), sizeof(width));
-    fd.read(reinterpret_cast<char *>(&height), sizeof(height));
-
-    return { width, height };
-}
-
-std::vector<Point> loadWeaponSpawnpoints(const std::string &fname){
-    std::ifstream fd(fname, std::ios::in | std::ios::binary);
-
-    std::vector<Point> res;
-
-    if(fd.is_open()){
-        size_t length;
-        fd.read(reinterpret_cast<char *>(&length), sizeof(length));
-        length /= 2 * sizeof(double);
-
-        for(int i = 0;i < length;++i){
-            Point point;
-
-            fd.read(reinterpret_cast<char *>(&point.x), sizeof(point.x));
-            fd.read(reinterpret_cast<char *>(&point.y), sizeof(point.y));
-
-            res.push_back(point);
-        }
-
-        fd.close();
-    }
-
-
-    return res;
-}
-
-std::pair<int, int> loadBoarders(const std::string &fname){
-    std::ifstream fd(fname, std::ios::in | std::ios::binary);
-
-    int width, height;
-
-    if(fd.is_open()){
-        skipWeaponSpawnpoints(fd);
-
-        fd.read(reinterpret_cast<char *>(&width), sizeof(width));
-        fd.read(reinterpret_cast<char *>(&height), sizeof(height));
-    }
-
-
-    return { width, height };
-}
-
-void saveLevel(const std::string &fname, const std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &polygons,
-               const std::vector<Point> &weaponSps, const std::pair<int, int> &boarders) {
-    std::ofstream fd(fname, std::ios::out | std::ios::binary | std::ios::trunc);
-
-    if(fd.is_open()){
-        size_t weaponsOffset = weaponSps.size() * 2 * sizeof(double);
-        fd.write(reinterpret_cast<char *>(&weaponsOffset), sizeof(weaponsOffset));
-
-        for(const auto &point : weaponSps){
-            double x = point.x, y = point.y;
-
-            fd.write(reinterpret_cast<char *>(&x), sizeof(x));
-            fd.write(reinterpret_cast<char *>(&y), sizeof(y));
-        }
-
-        int width = boarders.first, height = boarders.second;
-        fd.write(reinterpret_cast<char *>(&width), sizeof(width));
-        fd.write(reinterpret_cast<char *>(&height), sizeof(height));
-
-        size_t size = polygons.size();
-        fd.write(reinterpret_cast<char *>(&size), sizeof(size));
-
-        for(auto &it : polygons){
-            std::list<sf::Vector2f> &list = *it;
-            size = list.size();
-            fd.write(reinterpret_cast<char *>(&size), sizeof(size));
-
-            for(auto &point : list){
-                fd.write(reinterpret_cast<char *>(&point.x), sizeof(point.x));
-                fd.write(reinterpret_cast<char *>(&point.y), sizeof(point.y));
-            }
-        }
-
-        fd.close();
-    }
-}
-
-bool loadLevel(std::vector<std::shared_ptr<sf::Shape>> &shapes, const std::string &fname,
-               std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &polygons, std::vector<Point> &weaponSps) {
-    std::ifstream fd(fname, std::ios::in | std::ios::binary);
-
-    if(fd.is_open()){
-        weaponSps = loadWeaponSpawnpoints(fd);
-        skipBoarders(fd);
-
-        size_t polygonsSize;
-        fd.read(reinterpret_cast<char *>(&polygonsSize), sizeof(polygonsSize));
-
-        for(int i = 0;i < polygonsSize;++i){
-            polygons.emplace_back(std::make_shared<std::list<sf::Vector2f>>());
-
-            std::list<sf::Vector2f> &list = *polygons.back();
-
-            size_t listSize;
-            fd.read(reinterpret_cast<char *>(&listSize), sizeof(listSize));
-
-            for(int j = 0;j < listSize;++j){
-                double x, y;
-                fd.read(reinterpret_cast<char *>(&x), sizeof(x));
-                fd.read(reinterpret_cast<char *>(&y), sizeof(y));
-                list.emplace_back(x, y);
-            }
-        }
-
-        fd.close();
-    }else{
-        return false;
-    }
-
-    if(!weaponSps.empty()){
-        for(const auto &it : weaponSps){
-            std::shared_ptr<sf::CircleShape> circle = std::make_shared<sf::CircleShape>(3);
-            circle->setFillColor(sf::Color::Green);
-            circle->setPosition(it.x, it.y);
-            circle->setOrigin(3, 3);
-
-            shapes.push_back(circle);
-        }
-    }
-
-    if(!polygons.empty()){
-        for(const auto &it : polygons){
-            const std::list<sf::Vector2f> &list = *it;
-
-            sf::ConvexShape convex;
-            convex.setPointCount(list.size());
-            convex.setFillColor(sf::Color::Black);
-            int i = 0;
-            for(const auto &point : list){
-                convex.setPoint(i++, point);
-            }
-            shapes.push_back(std::make_shared<sf::ConvexShape>(convex));
-        }
-    }
-
-    return true;
-}
-
-void skipWeaponSpawnpoints(std::ifstream &fd){
-    size_t offset;
-    fd.read(reinterpret_cast<char *>(&offset), sizeof(offset));
-
-    fd.seekg(offset, std::ifstream::cur);
-}
-
-void skipBoarders(std::ifstream &fd){
-    fd.seekg(2 * sizeof(int), std::ifstream::cur);
-}
-
-std::vector<std::shared_ptr<Polygon>> loadLevel(const std::string &fname){
-    std::ifstream fd(fname, std::ios::in | std::ios::binary);
-
-    std::vector<std::shared_ptr<Polygon>> polygons;
-
-    if(fd.is_open()){
-        skipWeaponSpawnpoints(fd);
-        skipBoarders(fd);
-
-        size_t polygonsAmount;
-        fd.read(reinterpret_cast<char *>(&polygonsAmount), sizeof(polygonsAmount));
-
-        double minx, maxx;
-        double miny, maxy;
-        polygons.reserve(polygonsAmount);
-
-        for(int i = 0; i < polygonsAmount; ++i){ // for every polygon
-            minx = std::numeric_limits<double>::max(), maxx = std::numeric_limits<double>::min();
-            miny = std::numeric_limits<double>::max(), maxy = std::numeric_limits<double>::min();
-
-            std::vector<Point> points;
-
-            size_t bpAmount;
-            fd.read(reinterpret_cast<char *>(&bpAmount), sizeof(bpAmount));
-
-            points.reserve(bpAmount);
-
-            for(int j = 0; j < bpAmount; ++j){ // for every point in polygon
-                double x, y;
-                fd.read(reinterpret_cast<char *>(&x), sizeof(x));
-                fd.read(reinterpret_cast<char *>(&y), sizeof(y));
-                points.emplace_back(x, y);
-
-                if(x > maxx){
-                    maxx = x;
-                }else if(x < minx){
-                    minx = x;
-                }
-
-                if(y > maxy){
-                    maxy = y;
-                }else if(y < miny){
-                    miny = y;
-                }
-            }
-
-            polygons.push_back(std::make_shared<Polygon>(points, Point(minx, miny), Point(maxx, maxy)));
-        }
-
-        fd.close();
-    }
-
-    if(!polygons.empty()){
-        for(auto &it : polygons){
-            it->setConvex();
-        }
-    }
-
-    return polygons;
 }
 
 Point findNearestPoint(const Point &center, const std::vector<Point> &points){
@@ -669,7 +442,8 @@ std::string readFname(std::ifstream &fd){
     return res;
 }
 
-sf::Vector2f getMousePosition(const sf::RenderWindow &window){
+sf::Vector2f getMousePosition(sf::RenderWindow &window, const sf::View &view){
+    window.setView(view);
     return window.mapPixelToCoords(sf::Mouse::getPosition(window));
 }
 
@@ -723,6 +497,10 @@ double Vector::cross(const Point &point) const {
     return (x * point.y - y * point.x);
 }
 
+double Vector::cross(const Vector &vector) const {
+    return (x * vector.y - y * vector.x);
+}
+
 Vector Vector::operator/(double k) const {
     return { x / k, y / k };
 }
@@ -735,7 +513,7 @@ Vector operator*(double k, const Vector &v) {
     return { v.x * k, v.y * k };
 }
 
-double getAngleToZero(const sf::Vector2f &a) {
+double getAngleToZero(const Vector &a) {
     if(a.x == 0 && a.y == 0){
         return 0.0;
     }else if(a.x > 0){
@@ -749,9 +527,9 @@ Vector Vector::perpendicular() const {
     return { y, -x };
 }
 
-double Vector::sqr() const { return (x * x + y * y); }
+double Vector::sqr() const { return (std::pow(x, 2) + std::pow(y, 2)); }
 
-double Vector::length() const { return sqrt(x * x + y * y); }
+double Vector::length() const { return std::sqrt(sqr()); }
 
 void Vector::increase(double k) { x *= k; y *= k; }
 
@@ -765,3 +543,187 @@ void Vector::rotate(double radians) {
     y = x * sn + y * cs;
     x = newX;
 }
+
+sf::Texture createPlainTexture(unsigned int width, unsigned int height, const sf::Color &color){
+    sf::Texture texture;
+    texture.create(width, height);
+
+//    unsigned int pixelsSize = bgTextHeight * bgTextWidth;
+    unsigned int pixelsSize = 1;
+    auto *pixels = new sf::Uint8[pixelsSize * 4 /*for RGBA*/], *curPixel = pixels;
+    for(unsigned int i = 0;i < pixelsSize;++i){
+        curPixel[0] = color.r; // R
+        curPixel[1] = color.g; // G
+        curPixel[2] = color.b; // B
+        curPixel[3] = color.a; // A
+
+        curPixel += 4;
+    }
+
+    texture.update(pixels, 1, 1, 0, 0);
+
+    delete [] pixels;
+
+    return texture;
+}
+
+void createBackground(sf::VertexArray &bgVertices, sf::Texture &bgTexture, unsigned int width, unsigned int height){
+    bgVertices[0].position = sf::Vector2f(-100, -100);
+    bgVertices[1].position = sf::Vector2f((float) width + 100, -100);
+    bgVertices[2].position = sf::Vector2f((float) width + 100, (float) height + 100);
+    bgVertices[3].position = sf::Vector2f(-100, (float) height + 100);
+
+    unsigned int bgTextWidth = width + 200, bgTextHeight = height + 200;
+    bgTexture = createPlainTexture(bgTextWidth, bgTextHeight, sf::Color(228, 228, 228, 255));
+
+    bgVertices[0].texCoords = sf::Vector2f(0, 0);
+    bgVertices[1].texCoords = sf::Vector2f(0, 0);
+    bgVertices[2].texCoords = sf::Vector2f(0, 0);
+    bgVertices[3].texCoords = sf::Vector2f(0, 0);
+}
+
+bool almost_equal(double x, double y, int ulp) {
+    return std::abs(x-y) <= std::numeric_limits<float>::epsilon() * std::abs(x+y) * static_cast<float>(ulp)
+    || std::abs(x-y) < std::numeric_limits<float>::min();
+}
+
+bool almost_equal(const Point &p1, const Point &p2) {
+    return almost_equal(p1.x, p2.x) && almost_equal(p1.y, p2.y);
+}
+
+bool almost_equal(const Edge &e1, const Edge &e2){
+    return almost_equal(e1.first, e2.first) && almost_equal(e1.second, e2.second) ||
+            almost_equal(e1.first, e2.second) && almost_equal(e1.second, e2.first);
+}
+
+std::string getStringFromWindow(sf::RenderWindow &window, const std::string &message){
+    sf::String sfInput;
+    sf::Event event{};
+    while(window.isOpen()){
+        while (window.pollEvent(event)){
+            switch(event.type){
+                case sf::Event::Closed: {
+                    window.close();
+                    break;
+                }
+                case sf::Event::TextEntered: {
+                    int keycode = event.key.code;
+                    if (keycode >= '0' && keycode <= '9') sfInput += event.text.unicode;
+                    break;
+                }
+                case sf::Event::KeyPressed: {
+                    switch (event.key.code) {
+                        case sf::Keyboard::Enter: {
+                            return sfInput.toAnsiString();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return "";
+}
+
+// add 4 rectangles to polygons
+void addBoarders(PolygonArray &polygons, BoarderType &boarders){
+    int d = 10;
+    int width = (int) boarders.first;
+    int height = (int) boarders.second;
+    polygons.push_back(std::make_shared<Polygon>(std::vector<Point>({{-d, -d}, {0, -d}, {0, height + d}, {-d, height + d}})));
+    polygons.push_back(std::make_shared<Polygon>(std::vector<Point>({{-d, 0}, {-d, -d}, {width, -d}, {width, 0}})));
+    polygons.push_back(std::make_shared<Polygon>(std::vector<Point>({{width, -d}, {width + d, -d}, {width + d, height +d}, {width, height + d}})));
+    polygons.push_back(std::make_shared<Polygon>(std::vector<Point>({{width + d, height}, {width + d, height + d}, {-d, height + d}, {-d, height}})));
+}
+
+std::vector<Point> vertexArrayToPoints(sf::VertexArray &v){
+    std::vector<Point> points;
+    points.reserve(v.getVertexCount());
+    for(int i = 0;i < v.getVertexCount();++i){
+        points.emplace_back(v[i].position);
+    }
+    return points;
+}
+
+sf::VertexArray createGridVertices(int width, int height, float precision){
+    sf::VertexArray grid(sf::Lines);
+    float x = 0, y = 0;
+    // vertical
+    while(x < width){
+        grid.append(sf::Vector2f(x, 0));
+        grid.append(sf::Vector2f(x, height));
+        x += precision;
+    }
+    // horizontally
+    while(y < height){
+        grid.append(sf::Vector2f(0, y));
+        grid.append(sf::Vector2f(width, y));
+        y += precision;
+    }
+
+    return grid;
+}
+
+sf::VertexArray createGridVertices(BoarderType::first_type width, BoarderType::second_type height, float precision){
+    sf::VertexArray grid(sf::Lines);
+    float x = 0, y = 0;
+    // vertical
+    while(x < width){
+        grid.append(sf::Vector2f(x, 0));
+        grid.append(sf::Vector2f(x, height));
+        x += precision;
+    }
+    // horizontally
+    while(y < height){
+        grid.append(sf::Vector2f(0, y));
+        grid.append(sf::Vector2f(width, y));
+        y += precision;
+    }
+
+    return grid;
+}
+
+sf::CircleShape setAimPointShape(float radius){
+    sf::CircleShape cs(radius);
+
+    cs.setFillColor(sf::Color(205, 110, 0, 255));
+    cs.setOrigin(cs.getRadius(), cs.getRadius());
+    return cs;
+}
+
+void applyFriction(sf::Vector2f &vector, float friction){
+    bool movingForward;
+    friction += (vector.x + vector.y) / 500;
+
+    movingForward = vector.x > 0;
+    vector.x += movingForward ? -friction : friction;
+    if(vector.x > 0 != movingForward){
+        vector.x = 0;
+    }
+
+    movingForward = vector.y > 0;
+    vector.y += movingForward ? -friction : friction;
+    if(vector.y > 0 != movingForward){
+        vector.y = 0;
+    }
+}
+
+bool checkKeyPressed(std::initializer_list<sf::Keyboard::Key> keys){
+    return std::any_of(std::begin(keys), std::end(keys), [](sf::Keyboard::Key key) -> bool {
+        return sf::Keyboard::isKeyPressed(key);
+    });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -89,7 +89,7 @@ Enemy Enemy::loadEnemy(const std::string &fname) {
 void Player::update(const std::vector<std::shared_ptr<Polygon>> &polygons, const sf::Vector2f &mousePos,
                     const std::vector<std::shared_ptr<Entity>> &entities) {
     //rotate view sector:
-    setAngle(getAngleToZero(sf::Vector2f(mousePos.x - position.x, mousePos.y - position.y)));
+    setAngle(getAngleToZero(Vector(mousePos.x - position.x, mousePos.y - position.y)));
 
     //update speed
     updateSpeed();

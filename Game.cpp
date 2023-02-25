@@ -26,7 +26,7 @@ Game::Game(std::shared_ptr<sf::RenderWindow> &window_) :
 
     setEntities();
 
-    createBackground();
+    createBackground(backGroundVertices, backGroundTexture, levelWidth, levelHeight);
 
     players.push_back(player);
     window->setView(view);
@@ -69,39 +69,6 @@ void Game::loadFont() {
             std::getline(std::cin, fname);
         }
     }
-}
-
-void Game::createBackground(){
-    backGroundVertices[0].position = sf::Vector2f(-100, -100);
-    backGroundVertices[1].position = sf::Vector2f((float) levelWidth + 100, -100);
-    backGroundVertices[2].position = sf::Vector2f((float) levelWidth + 100, (float) levelHeight + 100);
-    backGroundVertices[3].position = sf::Vector2f(-100, (float) levelHeight + 100);
-
-    unsigned int bgTextWidth = levelWidth + 200, bgTextHeight = levelHeight + 200;
-
-    backGroundTexture.create(bgTextWidth, bgTextHeight);
-
-//    unsigned int pixelsSize = bgTextHeight * bgTextWidth;
-    unsigned int pixelsSize = 1;
-    auto *pixels = new sf::Uint8[pixelsSize * 4 /*for RGBA*/], *curPixel = pixels;
-    for(unsigned int i = 0;i < pixelsSize;++i){
-        curPixel[0] = 228; // R
-        curPixel[1] = 228; // G
-        curPixel[2] = 228; // B
-        curPixel[3] = 255; // A
-
-        curPixel += 4;
-    }
-
-//    backGroundTexture.update(pixels);
-    backGroundTexture.update(pixels, 1, 1, 0, 0);
-
-    delete [] pixels;
-
-    backGroundVertices[0].texCoords = sf::Vector2f(0, 0);
-    backGroundVertices[1].texCoords = sf::Vector2f(0, 0);
-    backGroundVertices[2].texCoords = sf::Vector2f(0, 0);
-    backGroundVertices[3].texCoords = sf::Vector2f(0, 0);
 }
 
 void Game::loadEnemies() {

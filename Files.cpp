@@ -15,7 +15,7 @@ void skWp(std::ifstream &fd) {
 
 //skip boarders
 void skBd(std::ifstream &fd) {
-    fd.seekg(2 * sizeof(int), std::ifstream::cur);
+    fd.seekg(2 * sizeof(unsigned int), std::ifstream::cur);
 }
 
 //save weapon spawnpoints
@@ -34,8 +34,8 @@ bool svWp(std::ofstream &fd, const std::vector<Point> &weaponSps){
 }
 
 //save boarders
-bool svBd(std::ofstream &fd, const std::pair<int, int> &bd){
-    int width = bd.first, height = bd.second;
+bool svBd(std::ofstream &fd, const BoarderType &bd){
+    unsigned int width = bd.first, height = bd.second;
 
     fd.write(reinterpret_cast<char *>(&width), sizeof(width));
     fd.write(reinterpret_cast<char *>(&height), sizeof(height));
@@ -44,16 +44,16 @@ bool svBd(std::ofstream &fd, const std::pair<int, int> &bd){
 }
 
 //save polygons
-bool svPl(std::ofstream &fd, const std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &pl){
-    size_t size = pl.size();
+bool svPl(std::ofstream &fd, const std::vector<std::shared_ptr<Polygon>> &pls){
+    size_t size = pls.size();
     fd.write(reinterpret_cast<char *>(&size), sizeof(size));
 
-    for (auto &it: pl) {
-        std::list<sf::Vector2f> &list = *it;
-        size = list.size();
+    for (auto &pl: pls) {
+        std::vector<Point> &points = pl->getPoints();
+        size = points.size();
         fd.write(reinterpret_cast<char *>(&size), sizeof(size));
 
-        for (auto &point: list) {
+        for (auto &point : points) {
             fd.write(reinterpret_cast<char *>(&point.x), sizeof(point.x));
             fd.write(reinterpret_cast<char *>(&point.y), sizeof(point.y));
         }
@@ -63,8 +63,8 @@ bool svPl(std::ofstream &fd, const std::vector<std::shared_ptr<std::list<sf::Vec
 }
 
 //save polygons weapons and boarders
-void svLv(const std::string &fname, const std::vector<std::shared_ptr<std::list<sf::Vector2f>>> &pl,
-              const std::vector<Point> &wp, const std::pair<int, int> &bd)
+void svLv(const std::string &fname, const std::vector<std::shared_ptr<Polygon>> &pl,
+              const std::vector<Point> &wp, const BoarderType &bd)
 {
     std::ofstream fd(fname, std::ios::out | std::ios::binary | std::ios::trunc);
 
@@ -98,19 +98,19 @@ std::vector<Point> ldWp(std::ifstream &fd) {
 }
 
 //load weapon spawn points wrapper
-std::vector<Point> ldWpWp(const std::string &fname) {
+std::vector<Point> ldWp(const std::string &fname) {
     std::ifstream fd(fname, std::ios::in | std::ios::binary);
 
     if (fd.is_open()) {
-        return loadWeaponSpawnpoints(fd);
+        return ldWp(fd);
     } else {
         throw std::runtime_error("File not found: " + fname);
     }
 }
 
 //load boarders
-std::pair<int, int> ldBd(std::ifstream &fd) {
-    int width, height;
+BoarderType ldBd(std::ifstream &fd) {
+    unsigned int width, height;
 
     fd.read(reinterpret_cast<char *>(&width), sizeof(width));
     fd.read(reinterpret_cast<char *>(&height), sizeof(height));
@@ -119,7 +119,7 @@ std::pair<int, int> ldBd(std::ifstream &fd) {
 }
 
 //load boarders wrapper
-std::pair<int, int> ldBdWp(const std::string &fname) {
+BoarderType ldBd(const std::string &fname) {
     std::ifstream fd(fname, std::ios::in | std::ios::binary);
 
     if (fd.is_open()) {
@@ -234,14 +234,13 @@ std::vector<std::shared_ptr<Polygon>> ldPl(std::ifstream &fd) {
         }
 
         polygons.push_back(std::make_shared<Polygon>(points, Point(minx, miny), Point(maxx, maxy)));
-        polygons.back()->setConvex();
     }
 
     return polygons;
 }
 
 //load polygons wrapper
-std::vector<std::shared_ptr<Polygon>> ldPlWp(const std::string &fname) {
+std::vector<std::shared_ptr<Polygon>> ldPl(const std::string &fname) {
     std::ifstream fd(fname, std::ios::in | std::ios::binary);
 
     if (fd.is_open()) {
