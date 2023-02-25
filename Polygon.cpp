@@ -1,7 +1,6 @@
 #include "Common.h"
 #include "Polygon.h"
 #include "Player.h"
-#include "Triangle.h"
 #include <utility>
 
 Polygon::Polygon(std::vector<Point> points, Point minPoint, Point maxPoint) :
