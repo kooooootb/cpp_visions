@@ -15,8 +15,9 @@ int main(){
     srand(time(nullptr));
 
     std::shared_ptr<sf::RenderWindow> pWindow = initWindow(screen_width, screen_height);
+    std::string chosenFileName = levelFname;
 
-    MainMenu mm(pWindow);
+    MainMenu mm(pWindow, chosenFileName);
 
     while(pWindow->isOpen()){
         ChooseStatus decision = mm.run();
@@ -29,7 +30,7 @@ int main(){
                 break;
             }
             case EDITOR:{
-                LevelEditor levelEditor(pWindow, levelFname);
+                LevelEditor levelEditor(pWindow, chosenFileName);
                 levelEditor.run();
 
                 break;

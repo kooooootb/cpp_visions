@@ -125,6 +125,8 @@ sf::CircleShape setAimPointShape(float radius = 6);
 void applyFriction(sf::Vector2f &vector, float friction);
 bool checkKeyPressed(std::initializer_list<sf::Keyboard::Key>);
 
+void setVerticesAsBox(sf::VertexArray &vertices, const sf::Vector2f &center, const sf::Vector2f &vector);
+
 #endif //T5_COMMON_H
 
 

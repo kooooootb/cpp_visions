@@ -713,7 +713,13 @@ bool checkKeyPressed(std::initializer_list<sf::Keyboard::Key> keys){
     });
 }
 
-
+void setVerticesAsBox(sf::VertexArray &vertices, const sf::Vector2f &center, const sf::Vector2f &vector){
+    vertices = sf::VertexArray(sf::TriangleFan, 4);
+    vertices[0].position = {center.x - vector.x, center.y - vector.y};
+    vertices[1].position = {center.x + vector.x, center.y - vector.y};
+    vertices[2].position = {center.x + vector.x, center.y + vector.y};
+    vertices[3].position = {center.x - vector.x, center.y + vector.y};
+}
 
 
 

@@ -19,9 +19,9 @@ LevelEditor::LevelEditor(std::shared_ptr<sf::RenderWindow> &pWindow_, const std:
 
     // try to load level file, if can't -> create new, ask for dimensions
     try{
-        polygons = ldPl(levelFname);
-        boarders = ldBd(levelFname);
-        weapons = ldWp(levelFname);
+        polygons = ldPl(levelFileName);
+        boarders = ldBd(levelFileName);
+        weapons = ldWp(levelFileName);
     } catch(std::runtime_error &e){
         inputDimension(boarders.first, "Input width");
         inputDimension(boarders.second, "Input height");
