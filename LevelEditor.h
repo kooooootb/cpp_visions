@@ -3,6 +3,9 @@
 
 #include "Common.h"
 #include "Button.h"
+#include "Prompt.h"
+
+#include <queue>
 
 #define LEVELEDITOR_DEBUGVIEW
 
@@ -16,6 +19,7 @@ private:
 
     using ButtonArray = std::vector<std::shared_ptr<Button<LevelEditor>>>;
     friend class Button<LevelEditor>;
+    friend class Prompt<LevelEditor>;
 
     // window cfgs
     std::shared_ptr<sf::RenderWindow> pWindow;
@@ -25,6 +29,7 @@ private:
     static constexpr float viewFriction = 1;
     sf::View levelView, hudView;
     bool exiting = false;
+    bool needSave = false;
 
     // editor variables
     bool isPrecise;
@@ -46,6 +51,9 @@ private:
     // buttons
     ButtonArray buttons;
 
+    // prompts
+    std::queue<Prompt<LevelEditor>> promptQueue;
+
     // background
     sf::VertexArray bgVertices;
     sf::Texture bgTexture;
@@ -54,6 +62,9 @@ private:
     sf::VertexArray unpreciseGridVertices;
     sf::Texture unpreciseGridTexture;
 
+    // file name for loading saving
+    std::string saveFileName;
+
 #ifdef LEVELEDITOR_DEBUGVIEW
     sf::CircleShape vertexPoint;
     sf::VertexArray triangle;
@@ -61,7 +72,6 @@ private:
 #endif
 
     // helper functions (fabric methods, )
-    void inputDimension(BoarderType::first_type &, std::string);
     void insertToLevel();
     void showUnpreciseGrid();
     void hideUnpreciseGrid();
@@ -73,6 +83,12 @@ private:
     void setButtons();
     bool handleButtons();
     void exitEditor();
+    void handleNormalEvent();
+    void handlePromptEvent();
+    void handlePromptClick();
+    void promptBoarders();
+    bool areBoardersSet() const;
+    void setBoarders(BoarderType);
 
     // drawings
     void drawBackground();
@@ -81,6 +97,7 @@ private:
     void drawCurrentPolygon();
     void drawAimPoint();
     void drawButtons();
+    void drawPrompt();
 
     // window functions (draw, update events)
     void handleEvents();

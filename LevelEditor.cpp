@@ -9,7 +9,9 @@ LevelEditor::LevelEditor(std::shared_ptr<sf::RenderWindow> &pWindow_, const std:
     viewSpeed(0, 0),
     viewAcceleration(0, 0),
     levelView(sf::View(sf::Vector2f(0, 0), static_cast<sf::Vector2f>(pWindow->getSize()))),
-    hudView(sf::View(sf::Vector2f(0, 0), static_cast<sf::Vector2f>(pWindow->getSize())))
+    hudView(sf::View(sf::Vector2f(0, 0), static_cast<sf::Vector2f>(pWindow->getSize()))),
+    boarders(-1, -1),
+    saveFileName(levelFileName)
 {
     // editor variables
     isPrecise = true;
@@ -17,26 +19,17 @@ LevelEditor::LevelEditor(std::shared_ptr<sf::RenderWindow> &pWindow_, const std:
     precision = 20;
     insertionMode = POLYGON;
 
-    // try to load level file, if can't -> create new, ask for dimensions
+    // try to load level file, if can't -> prompt for dimensions
     try{
-        polygons = ldPl(levelFileName);
-        boarders = ldBd(levelFileName);
-        weapons = ldWp(levelFileName);
+        polygons = ldPl(saveFileName);
+        setBoarders(ldBd(saveFileName));
+        weapons = ldWp(saveFileName);
     } catch(std::runtime_error &e){
-        inputDimension(boarders.first, "Input width");
-        inputDimension(boarders.second, "Input height");
-        addBoarders(polygons, boarders);
+        promptBoarders();
     }
 
     // set view
     pWindow->setView(levelView);
-
-    // set background
-    createBackground(bgVertices, bgTexture, boarders.first, boarders.second);
-
-    // set unprecise grid
-    unpreciseGridVertices = createGridVertices(boarders.first, boarders.second, precision);
-    unpreciseGridTexture = createPlainTexture(boarders.first, boarders.second, sf::Color(25, 25, 25, 255));
 
     // set buttons
     setButtons();
@@ -48,6 +41,64 @@ LevelEditor::LevelEditor(std::shared_ptr<sf::RenderWindow> &pWindow_, const std:
     triangle = sf::VertexArray(sf::Lines, 3);
     plainRedTexture = createPlainTexture(1, 1, sf::Color::Red);
 #endif
+}
+
+void LevelEditor::setBoarders(BoarderType newBoarders) {
+    boarders = newBoarders;
+
+    // set background
+    createBackground(bgVertices, bgTexture, boarders.first, boarders.second);
+
+    // set unprecise grid
+    unpreciseGridVertices = createGridVertices(boarders.first, boarders.second, precision);
+    unpreciseGridTexture = createPlainTexture(boarders.first, boarders.second, sf::Color(25, 25, 25, 255));
+
+    // save level at the end
+    needSave = true;
+}
+
+void LevelEditor::promptBoarders(){
+    // add prompts
+    float width3 = (float) pWindow->getSize().x / 3;
+    float height3 = (float) pWindow->getSize().y / 3;
+    float x = -width3;
+    float y = -height3;
+    float width = 2 * width3;
+    float height = 2 * height3;
+    sf::Color color = sf::Color(33, 85, 0, 160);
+
+    auto checkFunction = [](const sf::String &sfString) -> bool {
+        std::string numstr = sfString.toAnsiString();
+        try{
+            std::stoi(numstr);
+        } catch(std::invalid_argument &e){
+            return false;
+        } catch(std::out_of_range &e){
+            return false;
+        }
+        return true;
+    };
+
+    // one for width
+    promptQueue.emplace(*this, [](LevelEditor &outer, const sf::String &sfString) -> void {
+        outer.boarders.first = std::stoi(sfString.toAnsiString());
+    }, [](LevelEditor &outer) -> void {
+        // nothing to perform on ok
+    }, checkFunction, x, y, width, height, color, "Input level's width", "1000");
+
+    // and one for height (with addBoarders performing)
+    promptQueue.emplace(*this, [](LevelEditor &outer, const sf::String &sfString) -> void {
+        BoarderType::first_type boarder = std::stoi(sfString.toAnsiString());
+        outer.setBoarders({outer.boarders.first, boarder});
+
+        addBoarders(outer.polygons, outer.boarders);
+    }, [](LevelEditor &outer) -> void {
+        // nothing to perform on ok
+    }, checkFunction, x, y, width, height, color, "Input level's height", "1000");
+}
+
+bool LevelEditor::areBoardersSet() const {
+    return boarders.first > 0 && boarders.second  > 0;
 }
 
 void LevelEditor::setButtons(){
@@ -70,20 +121,6 @@ bool LevelEditor::handleButtons() {
     return std::any_of(std::begin(buttons), std::end(buttons), [&mousePos](auto &button) -> bool {
         return button->checkAndRun(mousePos);
     });
-}
-
-void LevelEditor::inputDimension(BoarderType::first_type &dimension, std::string message) {
-    do {
-        try {
-            if(!pWindow->isOpen()){
-                throw std::runtime_error("User closed window");
-            }
-            dimension = std::stoi(getStringFromWindow(*pWindow, message));
-        } catch (std::runtime_error &ex) {
-            dimension = 0;
-        }
-        message = "Dimension should be in range [" + std::to_string(BOARDER_MIN) + ", " + std::to_string(BOARDER_MAX) + "]";
-    }while(BOARDER_MAX < dimension || dimension < BOARDER_MIN);
 }
 
 void LevelEditor::insertToLevel(){
@@ -140,55 +177,104 @@ void LevelEditor::exitEditor() {
     exiting = true;
 }
 
-void LevelEditor::handleEvents(){
-    while (pWindow->pollEvent(event)) {
-        switch (event.type) {
-            case sf::Event::Closed:
-                pWindow->close();
+void LevelEditor::handlePromptClick() {
+    Prompt<LevelEditor> &prompt = promptQueue.front();
+    sf::Vector2f mousePos = getMousePosition(*pWindow, pWindow->getView());
+    if(prompt.handleClick(mousePos)){
+        promptQueue.pop();
+    }
+}
+
+void LevelEditor::handleNormalEvent(){
+    switch (event.type) {
+        case sf::Event::Closed:
+            pWindow->close();
+            exitEditor();
+            return;
+        case sf::Event::MouseButtonPressed: { // add some point
+            if (event.mouseButton.button == sf::Mouse::Left) {
+                if(!handleButtons()){
+                    insertToLevel();
+                }
+            } else {
+                showUnpreciseGrid();
+            }
+            break;
+        }
+        case sf::Event::MouseButtonReleased: {
+            if (event.mouseButton.button == sf::Mouse::Right) {
+                hideUnpreciseGrid();
+            }
+            break;
+        }
+        case sf::Event::MouseMoved: {
+//                setAimPoint();
+            break;
+        }
+        case sf::Event::KeyPressed:
+            switch (event.key.code) {
+                case sf::Keyboard::G: // switch modes
+                    switchInsertionMode();
+                    break;
+                case sf::Keyboard::E: // build current polygon and
+                    buildPolygon();
+                    // no break
+                case sf::Keyboard::O: // clear current polygon
+                    clearCurrentPolygon();
+                    break;
+                case sf::Keyboard::Escape:
+                    exitEditor();
+                    return;
+                default:
+                    //default keyboard button
+                    break;
+            }
+            break;
+        default:
+            //default event
+            break;
+    }
+}
+
+void LevelEditor::handlePromptEvent(){
+    // work with enter or escape presses
+    if(event.type == sf::Event::KeyPressed){
+        switch(event.key.code) {
+            case sf::Keyboard::Enter:
+                if(promptQueue.front().approve()){
+                    promptQueue.pop();
+                }
+                return;
+            case sf::Keyboard::Escape:
                 exitEditor();
                 return;
-            case sf::Event::MouseButtonPressed: { // add some point
-                if (event.mouseButton.button == sf::Mouse::Left) {
-                    if(!handleButtons()){
-                        insertToLevel();
-                    }
-                } else {
-                    showUnpreciseGrid();
-                }
-                break;
-            }
-            case sf::Event::MouseButtonReleased: {
-                if (event.mouseButton.button == sf::Mouse::Right) {
-                    hideUnpreciseGrid();
-                }
-                break;
-            }
-            case sf::Event::MouseMoved: {
-//                setAimPoint();
-                break;
-            }
-            case sf::Event::KeyPressed:
-                switch (event.key.code) {
-                    case sf::Keyboard::G: // switch modes
-                        switchInsertionMode();
-                        break;
-                    case sf::Keyboard::E: // build current polygon and
-                        buildPolygon();
-                        // no break
-                    case sf::Keyboard::O: // clear current polygon
-                        clearCurrentPolygon();
-                        break;
-                    case sf::Keyboard::Escape:
-                        exitEditor();
-                        return;
-                    default:
-                        //default keyboard button
-                        break;
-                }
-                break;
-            default:
-                //default event
-                break;
+        }
+    }
+
+    // other events
+    switch(event.type){
+        case sf::Event::Closed:
+            pWindow->close();
+            exitEditor();
+            break;
+        case sf::Event::TextEntered:
+            promptQueue.front().addInput(event.text.unicode);
+            break;
+        case sf::Event::MouseButtonPressed:
+            handlePromptClick();
+            break;
+        default:
+            //default event
+            break;
+    }
+}
+
+void LevelEditor::handleEvents(){
+    while (pWindow->pollEvent(event)) {
+        if(promptQueue.empty()){
+            handleNormalEvent();
+        } else{
+            handlePromptEvent();
         }
     }
 }
@@ -217,6 +303,10 @@ void LevelEditor::moveView(sf::Vector2f &d) {
 }
 
 void LevelEditor::updateView() {
+    if(!areBoardersSet()){
+        return;
+    }
+
     viewAcceleration = {0, 0};
     if(checkKeyPressed({sf::Keyboard::W, sf::Keyboard::Up})) viewAcceleration.y -= viewStep;
     if(checkKeyPressed({sf::Keyboard::A, sf::Keyboard::Left})) viewAcceleration.x -= viewStep;
@@ -260,6 +350,15 @@ void LevelEditor::drawButtons(){
     }
 }
 
+void LevelEditor::drawPrompt() {
+    if(promptQueue.empty()){
+        return;
+    }
+
+    const Prompt<LevelEditor> &prompt = promptQueue.front();
+    prompt.draw(*pWindow);
+}
+
 void LevelEditor::updateWindow() {
     // clear previous frame
     pWindow->clear();
@@ -275,6 +374,7 @@ void LevelEditor::updateWindow() {
     // draw hud section:
     pWindow->setView(hudView);
     drawButtons();
+    drawPrompt();
 
     // reset view
     pWindow->setView(levelView);
@@ -307,5 +407,7 @@ void LevelEditor::run() {
         updateWindow();
     }
 
-    svLv(levelFname, polygons, weapons, boarders);
+    if(needSave){
+        svLv(saveFileName, polygons, weapons, boarders);
+    }
 }

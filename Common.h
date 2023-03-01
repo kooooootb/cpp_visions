@@ -127,6 +127,8 @@ bool checkKeyPressed(std::initializer_list<sf::Keyboard::Key>);
 
 void setVerticesAsBox(sf::VertexArray &vertices, const sf::Vector2f &center, const sf::Vector2f &vector);
 
+bool checkFileName(const std::string &string);
+
 #endif //T5_COMMON_H
 
 

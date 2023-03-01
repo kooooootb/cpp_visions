@@ -167,6 +167,7 @@ void Prompt<T>::setColor(sf::Color color) {
 template<class T>
 bool Prompt<T>::handleClick(const sf::Vector2f &clickPos) const {
     if(buttons[0]->check(clickPos)){
+        buttons[0]->run();
         return approve();
     } else if(buttons.size() > 1 && buttons[1]->check(clickPos)){
         buttons[1]->run();
@@ -208,7 +209,6 @@ void Prompt<T>::draw(sf::RenderWindow &window) const {
 template<class T>
 bool Prompt<T>::approve() const {
     if(checkInput(currentInput)){
-        buttons[0]->run();
         applyFunction(outer, currentInput);
         return true;
     }

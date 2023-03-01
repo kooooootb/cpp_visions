@@ -55,7 +55,7 @@ void MainMenu::goToEditor() {
 //        bool result = fstream.is_open();
 //        fstream.close(); // just to be sure
 //        return result;
-        return true;
+        return checkFileName(sfString.toAnsiString());
     }, x, y, width, height, color, "Input level's file name", chosenFileName);
 }
 
@@ -67,9 +67,9 @@ void MainMenu::handleButtons(){
     sf::Vector2f mousePos = getMousePosition(*pWindow, pWindow->getView());
 
     // check until any button will react
-    while(!std::any_of(std::begin(buttons), std::end(buttons), [&mousePos](auto &button) -> bool {
+    std::any_of(std::begin(buttons), std::end(buttons), [&mousePos](auto &button) -> bool {
         return button->checkAndRun(mousePos);
-    }));
+    });
 }
 
 void MainMenu::handlePromptClick() {
@@ -129,7 +129,9 @@ void MainMenu::handlePromptEvent() {
     if(event.type == sf::Event::KeyPressed){
         switch(event.key.code) {
             case sf::Keyboard::Enter:
-                promptQueue.front().approve();
+                if(promptQueue.front().approve()){
+                    promptQueue.pop();
+                }
                 return;
             case sf::Keyboard::Escape:
                 promptQueue.pop();

@@ -721,15 +721,6 @@ void setVerticesAsBox(sf::VertexArray &vertices, const sf::Vector2f &center, con
     vertices[3].position = {center.x - vector.x, center.y + vector.y};
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
+bool checkFileName(const std::string &string) {
+    return true;
+}
