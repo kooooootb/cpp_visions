@@ -1,0 +1,34 @@
+{
+  "config": "main1",
+  "enemies": [
+    {
+      "positions": [[50, 50]],
+      "folder": "enemy1",
+      "type": "base"
+    }
+  ],
+  "weapons": [
+    {
+      "positions": [[50, 100]],
+      "folder": "weapon1",
+      "type": "base"
+    }
+  ],
+  "polygons": [
+    {
+      "vertices": [[0, 0], [0, 1000], [1000, 1000], [1000, 0]],
+      "texture": "background.png"
+    },
+    {
+      "vertices": [[200, 200], [300, 200], [300, 300], [200, 300]],
+      "texture": "texture1.png"
+    },
+    {
+      "vertices": [[300, 300], [200, 300], [180, 530], [500, 500]],
+      "texture": "texture1.png"
+    }
+  ],
+  "level width": 1000,
+  "level height": 1000,
+  "updaters": 8
+}

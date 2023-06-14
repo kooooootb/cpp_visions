@@ -1,0 +1,26 @@
+{
+  "text_x": 0,
+  "text_y": 0,
+  "text_width": 13,
+  "text_height": 24,
+  "x": 100,
+  "y": 100,
+  "angle": 0,
+  "body radius": 10,
+  "ammo": 40,
+  "id": 0,
+  "projectile": {
+    "text_x": 0,
+    "text_y": 0,
+    "text_width": 13,
+    "text_height": 24,
+    "x": 100,
+    "y": 100,
+    "angle": 0,
+    "body radius": 10,
+    "friction": 900,
+    "max speed": 200,
+    "acceleration": 20,
+    "damage": 10
+  }
+}

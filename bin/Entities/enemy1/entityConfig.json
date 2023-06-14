@@ -1,0 +1,17 @@
+{
+  "text_x": 0,
+  "text_y": 0,
+  "text_width": 13,
+  "text_height": 24,
+  "health": 100,
+  "regenerative speed": 1,
+  "x": 100,
+  "y": 100,
+  "friction": 900,
+  "max speed": 200,
+  "acceleration": 20,
+  "fov": 100,
+  "view length": 300,
+  "body radius": 10,
+  "gun positions": {"1": [1, 1]}
+}
